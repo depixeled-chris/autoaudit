@@ -1,0 +1,23 @@
+@use '../../../styles/variables.scss' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.submitError {
+  padding: $spacing-md;
+  background-color: rgba($color-error-value, 0.1);
+  border: 1px solid $color-error;
+  border-radius: $radius-md;
+  color: $color-error;
+  font-size: $font-size-sm;
+}

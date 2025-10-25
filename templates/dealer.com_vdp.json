@@ -1,0 +1,33 @@
+{
+  "template_id": "dealer.com_vdp",
+  "known_compliance": {
+    "vehicle_id_adjacent": {
+      "status": "compliant",
+      "confidence": 0.95,
+      "verified_date": "2025-10-24T18:12:27.634158",
+      "verification_method": "visual",
+      "notes": "The make, model, and year of the vehicle ('Used 2022 Chevrolet Silverado 1500 RST') is prominently displayed directly above the price ('$35,411')."
+    },
+    "full_price_disclosure": {
+      "status": "non_compliant",
+      "confidence": 0.85,
+      "verified_date": "2025-10-24T18:14:04.812279",
+      "verification_method": "visual",
+      "notes": "The price is prominently displayed as $35,411 with no additional qualifiers nearby indicating fees are excluded here."
+    },
+    "price_disclosure": {
+      "status": "compliant",
+      "confidence": 0.9,
+      "verified_date": "2025-10-24T18:17:15.572041",
+      "verification_method": "visual",
+      "notes": "The price of $35,411 is prominently displayed in large, bold font next to the vehicle name and details. It is within the central area of the page, easily visible to users."
+    },
+    "vehicle_make_model_year_adjacent": {
+      "status": "compliant",
+      "confidence": 0.95,
+      "verified_date": "2025-10-24T18:17:21.205849",
+      "verification_method": "visual",
+      "notes": "The webpage displays the vehicle's make/model/year ('Used 2022 Chevrolet Silverado 1500 RST') directly above the price ('$55,411') in the same visual section. Both elements are prominent and easily visible."
+    }
+  }
+}

@@ -1,0 +1,6 @@
+playwright==1.48.0
+openai>=1.55.0
+html2text==2024.2.26
+python-dotenv==1.0.1
+pydantic==2.9.2
+aiohttp==3.10.10

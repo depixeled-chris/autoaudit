@@ -1,0 +1,91 @@
+services:
+  # FastAPI Backend
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: autoaudit-server
+    ports:
+      - "8000:8000"  # Expose for direct access during development
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_PATH=/app/data/compliance.db
+      - PYTHONUNBUFFERED=1
+      - WATCHFILES_FORCE_POLLING=true  # Required for WSL2/Windows Docker file watching
+    volumes:
+      # Mount source code for live reload
+      - ./server/api:/app/api
+      - ./server/core:/app/core
+      - ./server/services:/app/services
+      - ./server/schemas:/app/schemas
+      # Persist database
+      - ./server/data:/app/data
+      # Persist screenshots
+      - ./server/screenshots:/app/screenshots
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - autoaudit-network
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React Frontend
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: autoaudit-client
+    ports:
+      - "5173:5173"  # Vite dev server port
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true  # Required for WSL2/Windows Docker file watching
+    volumes:
+      # Mount source code for live reload
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+      - ./client/index.html:/app/index.html
+      - ./client/vite.config.ts:/app/vite.config.ts
+      - ./client/tsconfig.json:/app/tsconfig.json
+      - ./client/tsconfig.node.json:/app/tsconfig.node.json
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - autoaudit-network
+    command: npm run dev -- --host 0.0.0.0
+
+  # NGINX Reverse Proxy (optional for dev, use direct ports above if preferred)
+  nginx:
+    image: nginx:alpine
+    container_name: autoaudit-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - server
+      - client
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - autoaudit-network
+
+volumes:
+  database:
+    driver: local
+
+networks:
+  autoaudit-network:
+    driver: bridge

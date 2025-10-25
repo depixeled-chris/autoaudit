@@ -1,0 +1,174 @@
+@use '../../styles/variables.scss' as *;
+@use 'sass:color';
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: $color-surface;
+}
+
+.sidebar {
+  width: 260px;
+  background-color: $color-background;
+  border-right: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+}
+
+.logo {
+  padding: $spacing-xl;
+  border-bottom: 1px solid $color-border;
+
+  h1 {
+    font-size: $font-size-xl;
+    font-weight: 700;
+    color: $color-primary;
+    margin: 0;
+  }
+
+  p {
+    font-size: $font-size-xs;
+    color: $color-text-muted;
+    margin: $spacing-xs 0 0;
+  }
+}
+
+.userSection {
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-border;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.nav {
+  flex: 1;
+  padding: $spacing-lg;
+  overflow-y: auto;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-xs;
+  color: $color-text-secondary;
+  text-decoration: none;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+  font-size: $font-size-sm;
+  font-weight: 500;
+
+  &:hover {
+    background-color: $color-surface;
+    color: $color-text-primary;
+  }
+
+  &.active {
+    background-color: color.adjust($color-primary-value, $lightness: 45%);
+    color: $color-primary;
+  }
+}
+
+.navIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebarFooter {
+  border-top: 1px solid $color-border;
+  padding: $spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  margin-top: auto;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userEmail {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $color-text-secondary;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+  cursor: pointer;
+  border: 1px solid $color-border;
+  width: 100%;
+
+  &:hover {
+    background-color: $color-surface;
+    color: $color-error;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.main {
+  flex: 1;
+  padding: $spacing-2xl;
+  min-width: 0;
+}
+
+.header {
+  margin-bottom: $spacing-2xl;
+
+  h1 {
+    font-size: $font-size-3xl;
+    font-weight: 700;
+    margin: 0 0 $spacing-xs;
+  }
+
+  p {
+    color: $color-text-secondary;
+    font-size: $font-size-base;
+  }
+}

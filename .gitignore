@@ -1,0 +1,102 @@
+# Environment
+.env
+.env.local
+.env.*.local
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+server/data/*.db
+server/data/*.sqlite
+server/data/*.sqlite3
+
+# Playwright
+.playwright/
+
+# Output
+reports/
+llm_inputs/
+screenshots/
+server/screenshots/
+*.log
+
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Docker
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.tmp
+*.temp
+
+# Claude local settings
+.claude/settings.local.json
+
+# Generated OpenAPI specs
+openapi.json
+openapi.yaml

@@ -1,0 +1,194 @@
+name: Deploy to Hetzner
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test SSH Connectivity
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        HOST="${{ secrets.SERVER_IP }}"
+
+        echo "Testing TCP/22 to $HOST..."
+        if timeout 5 bash -c "echo > /dev/tcp/${HOST}/22" 2>/dev/null; then
+          echo "✅ Port 22 is open"
+        else
+          echo "❌ Port 22 is closed or filtered"
+          exit 1
+        fi
+
+        echo "⚠️ Skipping ping test (commonly blocked by firewall)"
+
+        echo "Testing SSH auth..."
+        keyfile="$(mktemp)"
+        trap 'rm -f "$keyfile"' EXIT
+        printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > "$keyfile"
+        chmod 600 "$keyfile"
+
+        if timeout 10 ssh -i "$keyfile" -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"$HOST" "exit"; then
+          echo "✅ SSH authentication OK"
+        else
+          echo "❌ SSH authentication failed"
+          exit 1
+        fi
+
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET_KEY }}
+        OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: root
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        envs: TOKEN,JWT_SECRET,OPENAI_KEY
+        script: |
+          set -e
+
+          echo "🚀 AutoAudit Production Deployment"
+
+          # Colors for output
+          RED='\033[0;31m'
+          GREEN='\033[0;32m'
+          BLUE='\033[0;34m'
+          NC='\033[0m'
+
+          info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+          success() { echo -e "${GREEN}[✓]${NC} $1"; }
+          error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+
+          # Install system prerequisites
+          info "Checking system prerequisites..."
+          if ! command -v docker >/dev/null 2>&1; then
+            info "Installing Docker..."
+            curl -fsSL https://get.docker.com | sh
+            systemctl start docker
+            systemctl enable docker
+          fi
+
+          if ! command -v docker-compose >/dev/null 2>&1; then
+            info "Installing docker-compose..."
+            curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose
+            export PATH=/usr/local/bin:$PATH
+            echo 'export PATH=/usr/local/bin:$PATH' >> ~/.bashrc
+          fi
+
+          apt update -qq && apt install -y git curl jq >/dev/null 2>&1 || true
+          success "System prerequisites ready"
+
+          # Setup GitHub authentication
+          info "Configuring GitHub authentication..."
+
+          # Disable git credential helper to prevent password prompts
+          export GIT_TERMINAL_PROMPT=0
+          git config --global credential.helper ""
+
+          # Clone/update repository
+          APP_DIR="/root/autoaudit"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+
+          if [ ! -d "$APP_DIR" ]; then
+            info "🚀 First deployment - cloning repository..."
+            if ! git clone "$REPO_URL" "$APP_DIR"; then
+              error "Failed to clone repository"
+            fi
+            cd "$APP_DIR"
+            success "Repository cloned"
+          else
+            info "🔄 Updating existing deployment..."
+            cd "$APP_DIR"
+            git reset --hard HEAD
+            git clean -fd
+            git remote set-url origin "$REPO_URL"
+            git pull origin main || git pull origin master
+            success "Repository updated"
+          fi
+
+          cd "$APP_DIR"
+
+          # Create environment file
+          info "📝 Creating production environment configuration..."
+          cat > .env <<EOF
+          # JWT Configuration
+          JWT_SECRET_KEY=${JWT_SECRET}
+
+          # OpenAI API Key
+          OPENAI_API_KEY=${OPENAI_KEY}
+
+          # API URL for client (empty for reverse proxy)
+          VITE_API_URL=
+          EOF
+          success "Production environment configured"
+
+          # Deploy containers
+          info "🐳 Deploying application containers..."
+          docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
+          docker system prune -f >/dev/null 2>&1 || true
+
+          if command -v /usr/local/bin/docker-compose >/dev/null 2>&1; then
+            /usr/local/bin/docker-compose -f docker-compose.prod.yml build --no-cache
+            /usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
+          else
+            docker-compose -f docker-compose.prod.yml build --no-cache
+            docker-compose -f docker-compose.prod.yml up -d
+          fi
+          success "Containers started"
+
+          # Wait for services to initialize
+          info "⏳ Waiting for services to initialize (30 seconds)..."
+          sleep 30
+
+          # Check container status
+          info "📊 Checking container status..."
+          if command -v /usr/local/bin/docker-compose >/dev/null 2>&1; then
+            /usr/local/bin/docker-compose -f docker-compose.prod.yml ps
+          else
+            docker-compose -f docker-compose.prod.yml ps
+          fi
+
+          # Health checks
+          info "🩺 Running health checks..."
+
+          # Backend health check via nginx /api/ route
+          for i in {1..6}; do
+            if curl -s --max-time 10 http://localhost/api/health >/dev/null 2>&1; then
+              success "✅ Backend healthy via /api/"
+              break
+            elif [ $i -eq 6 ]; then
+              error "❌ Backend health check failed after $i attempts"
+            else
+              info "Backend not ready, retrying in 10s... ($i/6)"
+              sleep 10
+            fi
+          done
+
+          # Frontend health check via nginx root route
+          for i in {1..10}; do
+            if curl -s --max-time 10 http://localhost/ >/dev/null 2>&1; then
+              success "✅ Frontend responding via nginx"
+              break
+            elif [ $i -eq 10 ]; then
+              error "❌ Frontend health check failed after $i attempts"
+            else
+              info "Frontend not ready, retrying in 10s... ($i/10)"
+              sleep 10
+            fi
+          done
+
+          SERVER_IP=$(curl -s https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')
+          success "🎉 Deployment completed successfully!"
+          echo ""
+          echo "🌐 Application URLs:"
+          echo "   Frontend:  http://$SERVER_IP"
+          echo "   Backend:   http://$SERVER_IP/api/"
+          echo "   API Docs:  http://$SERVER_IP/api/docs"
+          echo "   Health:    http://$SERVER_IP/api/health"
+          echo ""

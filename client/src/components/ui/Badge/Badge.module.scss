@@ -1,0 +1,38 @@
+@use '../../../styles/variables.scss' as *;
+@use 'sass:color';
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-xs;
+  font-weight: 500;
+  border-radius: $radius-md;
+  white-space: nowrap;
+}
+
+.success {
+  background-color: color.adjust($color-success-value, $lightness: 45%);
+  color: color.adjust($color-success-value, $lightness: -10%);
+}
+
+.warning {
+  background-color: color.adjust($color-warning-value, $lightness: 45%);
+  color: color.adjust($color-warning-value, $lightness: -15%);
+}
+
+.error {
+  background-color: color.adjust($color-error-value, $lightness: 40%);
+  color: color.adjust($color-error-value, $lightness: -10%);
+}
+
+.info {
+  background-color: color.adjust($color-info-value, $lightness: 45%);
+  color: color.adjust($color-info-value, $lightness: -10%);
+}
+
+.neutral {
+  background-color: $color-surface;
+  color: $color-text-secondary;
+  border: 1px solid $color-border;
+}

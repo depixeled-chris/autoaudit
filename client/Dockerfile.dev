@@ -1,0 +1,21 @@
+# Development Dockerfile for React + Vite with live reload
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy application code
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Development: Use Vite dev server with HMR
+# This will be overridden by docker-compose command
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

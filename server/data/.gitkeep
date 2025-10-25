@@ -1,0 +1,3 @@
+# This directory stores the SQLite database
+# The .db files are gitignored to prevent committing sensitive data
+# This .gitkeep file ensures the directory exists when cloning the repo

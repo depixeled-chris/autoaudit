@@ -1,0 +1,41 @@
+@use '../../../styles/variables.scss' as *;
+
+.card {
+  background-color: $color-background;
+  border: 1px solid $color-border;
+  border-radius: $radius-lg;
+  overflow: hidden;
+  transition: box-shadow $transition-base;
+
+  &.hover:hover {
+    box-shadow: $shadow-lg;
+  }
+}
+
+.header {
+  padding: $spacing-lg;
+  border-bottom: 1px solid $color-border;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $color-text-primary;
+  margin: 0;
+}
+
+.description {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin: $spacing-xs 0 0;
+}
+
+.content {
+  padding: $spacing-lg;
+}
+
+.footer {
+  padding: $spacing-lg;
+  border-top: 1px solid $color-border;
+  background-color: $color-surface;
+}
