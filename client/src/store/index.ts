@@ -5,6 +5,7 @@ import { apiSlice } from './api/apiSlice';
 import { projectsApi } from '@features/projects/projectsApi';
 import { urlsApi } from '@features/urls/urlsApi';
 import { checksApi } from '@features/checks/checksApi';
+import { pageTypesApi } from '@features/config/pageTypesApi';
 
 export const store = configureStore({
   reducer: {
@@ -13,9 +14,10 @@ export const store = configureStore({
     [projectsApi.reducerPath]: projectsApi.reducer,
     [urlsApi.reducerPath]: urlsApi.reducer,
     [checksApi.reducerPath]: checksApi.reducer,
+    [pageTypesApi.reducerPath]: pageTypesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(apiSlice.middleware, projectsApi.middleware, urlsApi.middleware, checksApi.middleware),
+    getDefaultMiddleware().concat(apiSlice.middleware, projectsApi.middleware, urlsApi.middleware, checksApi.middleware, pageTypesApi.middleware),
 });
 
 // Enable refetchOnFocus/refetchOnReconnect behaviors

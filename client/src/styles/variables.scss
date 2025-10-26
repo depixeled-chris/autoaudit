@@ -16,6 +16,7 @@ $color-border-light: #e5e7eb;
 $color-text-primary-light: #111827;
 $color-text-secondary-light: #6b7280;
 $color-text-muted-light: #9ca3af;
+$color-primary-bg-light: #dbeafe; // Light blue background for active states
 
 // Dark theme colors
 $color-background-dark: #0f172a;
@@ -24,6 +25,7 @@ $color-border-dark: #334155;
 $color-text-primary-dark: #f1f5f9;
 $color-text-secondary-dark: #cbd5e1;
 $color-text-muted-dark: #94a3b8;
+$color-primary-bg-dark: #1e3a5f; // Muted blue background for active states in dark mode
 
 // CSS Custom Properties (for runtime theming)
 :root {
@@ -42,6 +44,7 @@ $color-text-muted-dark: #94a3b8;
   --color-text-primary: #{$color-text-primary-light};
   --color-text-secondary: #{$color-text-secondary-light};
   --color-text-muted: #{$color-text-muted-light};
+  --color-primary-bg: #{$color-primary-bg-light};
 }
 
 // SCSS variables (use CSS custom properties for runtime theming)
@@ -60,6 +63,7 @@ $color-border: var(--color-border);
 $color-text-primary: var(--color-text-primary);
 $color-text-secondary: var(--color-text-secondary);
 $color-text-muted: var(--color-text-muted);
+$color-primary-bg: var(--color-primary-bg);
 
 // Spacing
 $spacing-xs: 0.25rem;

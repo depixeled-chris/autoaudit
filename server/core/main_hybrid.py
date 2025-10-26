@@ -153,6 +153,10 @@ class HybridComplianceChecker:
                 url_type=url_type
             )
 
+            # Store llm_input path and text for later retrieval
+            text_result['llm_input_path'] = str(input_filename)
+            text_result['llm_input_text'] = llm_input
+
             logger.info(f"✓ Text analysis complete. Score: {text_result.get('overall_compliance_score', 0)}/100")
 
             # Step 4: Visual Verification (if needed)
@@ -172,11 +176,11 @@ class HybridComplianceChecker:
                 # For homepages, ALWAYS do visual verification of key contact info
                 # even if no violations are flagged
                 if force_visual_for_homepage and not needs_visual:
-                    logger.info("Homepage detected - forcing visual verification of contact information")
+                    logger.info("Homepage detected - forcing visual verification of dealership identity and contact information")
                     # Create synthetic verification task for contact info visibility
                     needs_visual.append({
-                        'rule_key': 'homepage_contact_visibility',
-                        'rule_violated': 'Physical address, phone number, and business hours must be conspicuous and easily accessible',
+                        'rule_key': 'homepage_dealership_identity',
+                        'rule_violated': 'Dealership name, physical address, and phone number must be conspicuous and easily accessible on the homepage. Business hours should be visible.',
                         'needs_visual_verification': True
                     })
 
@@ -247,14 +251,49 @@ class HybridComplianceChecker:
             text_result['visual_verifications'] = visual_results
             text_result['template_id'] = template_id
 
-            # Calculate token usage
-            text_tokens = text_result.get('tokens_used', 0)
-            visual_tokens = sum(v.get('tokens_used', 0) for v in visual_results)
-            total_tokens = text_tokens + visual_tokens
+            # Recalculate compliance score based on visual verification results
+            if visual_results:
+                logger.info("Recalculating compliance score with visual verification results...")
 
-            text_result['text_analysis_tokens'] = text_tokens
-            text_result['visual_tokens'] = visual_tokens
-            text_result['total_tokens'] = total_tokens
+                # Count visual non-compliances
+                visual_violations = sum(1 for v in visual_results if not v.get('is_compliant', True))
+                text_violations = len(text_result.get('violations', []))
+                total_violations = text_violations + visual_violations
+
+                # Adjust score based on visual results
+                # Each visual non-compliance reduces score by 10-20 points depending on confidence
+                score_reduction = 0
+                for v in visual_results:
+                    if not v.get('is_compliant', True):
+                        confidence = v.get('confidence', 1.0)
+                        # Higher confidence violations have bigger impact
+                        score_reduction += int(10 + (confidence * 10))
+
+                original_score = text_result.get('overall_compliance_score', 100)
+                adjusted_score = max(0, original_score - score_reduction)
+
+                if adjusted_score != original_score:
+                    logger.info(f"Score adjusted from {original_score} to {adjusted_score} based on {visual_violations} visual violation(s)")
+                    text_result['overall_compliance_score'] = adjusted_score
+
+                    # Update compliance status based on new score
+                    if adjusted_score >= 90:
+                        text_result['compliance_status'] = 'COMPLIANT'
+                    elif adjusted_score >= 70:
+                        text_result['compliance_status'] = 'MOSTLY_COMPLIANT'
+                    elif adjusted_score >= 50:
+                        text_result['compliance_status'] = 'NEEDS_REVIEW'
+                    else:
+                        text_result['compliance_status'] = 'NON_COMPLIANT'
+
+            # Store token usage info for later database insertion
+            text_result['text_token_usage'] = text_result.get('token_usage', {})
+            text_result['visual_token_usages'] = [v.get('token_usage', {}) for v in visual_results]
+
+            # Calculate totals for backward compatibility and logging
+            text_tokens = text_result.get('token_usage', {}).get('total_tokens', 0)
+            visual_tokens = sum(v.get('token_usage', {}).get('total_tokens', 0) for v in visual_results)
+            total_tokens = text_tokens + visual_tokens
 
             logger.info(f"✓ Token usage - Text: {text_tokens}, Visual: {visual_tokens}, Total: {total_tokens}")
 

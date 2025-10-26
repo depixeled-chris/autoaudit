@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from .config import StateRules, OPENAI_MODEL, MAX_TOKENS, TEMPERATURE
 from .url_type_preambles import get_preamble, get_url_type_name
+from .page_type_rules import format_rules_for_prompt
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -117,9 +118,13 @@ class ComplianceAnalyzer:
             result["url"] = url
             result["state"] = state_rules.state
             result["model_used"] = OPENAI_MODEL
-            result["tokens_used"] = response.usage.total_tokens
+            result["token_usage"] = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
+            }
 
-            logger.info(f"Analysis complete. Tokens used: {response.usage.total_tokens}")
+            logger.info(f"Analysis complete. Tokens: {response.usage.prompt_tokens} prompt + {response.usage.completion_tokens} completion = {response.usage.total_tokens} total")
 
             return result
 
@@ -140,13 +145,24 @@ class ComplianceAnalyzer:
         Returns:
             Formatted prompt string
         """
-        # Get URL type-specific preamble
+        # Get URL type-specific preamble and rules
         url_type_context = get_preamble(url_type)
+
+        # Get page-type-specific rule context
+        # Extract state code - handle both "Oklahoma" and "OK" formats
+        state_code = "OK" if "oklahoma" in state_rules.state.lower() else state_rules.state
+        page_rules_context = format_rules_for_prompt(
+            state_code=state_code,
+            page_type=url_type,
+            base_rules=[]  # Not used currently
+        )
 
         prompt = f"""Analyze the following auto dealership website content for compliance with {state_rules.state} regulations.
 
 URL: {url}
 Page Type: {get_url_type_name(url_type)}
+
+{page_rules_context}
 
 {url_type_context}
 

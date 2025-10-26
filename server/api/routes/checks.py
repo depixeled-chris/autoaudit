@@ -63,8 +63,9 @@ async def run_compliance_check(
                 overall_score=result.get('overall_compliance_score', 0),
                 compliance_status=result.get('compliance_status', 'UNKNOWN'),
                 summary=result.get('summary', ''),
-                llm_input_path=result.get('report_paths', {}).get('llm_input'),
-                report_path=result.get('report_paths', {}).get('markdown')
+                llm_input_path=result.get('llm_input_path'),
+                report_path=result.get('report_paths', {}).get('markdown'),
+                llm_input_text=result.get('llm_input_text')
             )
 
             # Save violations
@@ -95,6 +96,32 @@ async def run_compliance_check(
                     screenshot_path=visual.get('screenshot_path'),
                     cached=visual.get('cached', False)
                 )
+
+            # Save LLM call records
+            # Text analysis call
+            text_token_usage = result.get('text_token_usage', {})
+            if text_token_usage:
+                db.save_llm_call(
+                    check_id=check_id,
+                    call_type='text_analysis',
+                    model=result.get('model_used', 'unknown'),
+                    prompt_tokens=text_token_usage.get('prompt_tokens', 0),
+                    completion_tokens=text_token_usage.get('completion_tokens', 0),
+                    total_tokens=text_token_usage.get('total_tokens', 0)
+                )
+
+            # Visual verification calls
+            for i, visual in enumerate(result.get('visual_verifications', [])):
+                token_usage = visual.get('token_usage', {})
+                if token_usage and not visual.get('cached', False):
+                    db.save_llm_call(
+                        check_id=check_id,
+                        call_type='visual_verification',
+                        model=visual.get('model_used', 'gpt-4o'),
+                        prompt_tokens=token_usage.get('prompt_tokens', 0),
+                        completion_tokens=token_usage.get('completion_tokens', 0),
+                        total_tokens=token_usage.get('total_tokens', 0)
+                    )
 
             # Fetch complete check with related data
             check = db.get_compliance_check(check_id)

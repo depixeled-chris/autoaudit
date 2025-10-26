@@ -12,7 +12,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from api.routes import projects, urls, checks, templates, reports, auth
+from api.routes import projects, urls, checks, templates, reports, auth, page_types
 from core.config import CORS_ORIGINS, IS_PRODUCTION
 
 logging.basicConfig(level=logging.INFO)
@@ -80,6 +80,7 @@ app.include_router(urls.router, prefix="/api/urls", tags=["URLs"])
 app.include_router(checks.router, prefix="/api/checks", tags=["Compliance Checks"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Templates"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+app.include_router(page_types.router)
 
 
 @app.get("/", tags=["Root"])

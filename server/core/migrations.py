@@ -266,6 +266,46 @@ def migration_005_add_visual_tokens(conn):
             raise
 
 
+def migration_006_add_llm_input_text(conn):
+    """Add llm_input_text column to compliance_checks table."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute("ALTER TABLE compliance_checks ADD COLUMN llm_input_text TEXT")
+        logger.info("Added llm_input_text column to compliance_checks table")
+    except sqlite3.OperationalError as e:
+        if 'duplicate column name' in str(e).lower():
+            logger.info("llm_input_text column already exists")
+        else:
+            raise
+
+
+def migration_007_create_llm_calls_table(conn):
+    """Create llm_calls table for tracking individual LLM API calls."""
+    cursor = conn.cursor()
+
+    # Create llm_calls table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS llm_calls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            check_id INTEGER NOT NULL,
+            call_type TEXT NOT NULL,
+            model TEXT NOT NULL,
+            prompt_tokens INTEGER DEFAULT 0,
+            completion_tokens INTEGER DEFAULT 0,
+            total_tokens INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (check_id) REFERENCES compliance_checks (id) ON DELETE CASCADE
+        )
+    """)
+
+    # Create index for faster queries by check_id
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_llm_calls_check_id ON llm_calls(check_id)
+    """)
+
+    logger.info("Created llm_calls table and index")
+
+
 # All migrations in order
 MIGRATIONS = [
     Migration(1, "add_base_url", migration_001_add_base_url),
@@ -273,6 +313,8 @@ MIGRATIONS = [
     Migration(3, "add_deleted_at", migration_003_add_deleted_at),
     Migration(4, "add_token_tracking", migration_004_add_token_tracking),
     Migration(5, "add_visual_tokens", migration_005_add_visual_tokens),
+    Migration(6, "add_llm_input_text", migration_006_add_llm_input_text),
+    Migration(7, "create_llm_calls_table", migration_007_create_llm_calls_table),
 ]
 
 

@@ -27,8 +27,8 @@ const axiosBaseQuery =
     }
   };
 
-// URL types
-export interface URL {
+// URL types (renamed from URL to MonitoredURL to avoid conflict with native URL class)
+export interface MonitoredURL {
   id: number;
   project_id: number | null;
   url: string;
@@ -63,7 +63,7 @@ export const urlsApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ['URL'],
   endpoints: (builder) => ({
-    getURLs: builder.query<URL[], { project_id?: number; active_only?: boolean }>({
+    getURLs: builder.query<MonitoredURL[], { project_id?: number; active_only?: boolean }>({
       query: ({ project_id, active_only = true }) => ({
         url: '/api/urls',
         params: { project_id, active_only },
@@ -76,11 +76,11 @@ export const urlsApi = createApi({
             ]
           : [{ type: 'URL', id: 'LIST' }],
     }),
-    getURL: builder.query<URL, number>({
+    getURL: builder.query<MonitoredURL, number>({
       query: (id) => ({ url: `/api/urls/${id}` }),
       providesTags: (_result, _error, id) => [{ type: 'URL', id }],
     }),
-    createURL: builder.mutation<URL, URLCreate>({
+    createURL: builder.mutation<MonitoredURL, URLCreate>({
       query: (data) => ({
         url: '/api/urls',
         method: 'POST',
@@ -88,7 +88,7 @@ export const urlsApi = createApi({
       }),
       invalidatesTags: [{ type: 'URL', id: 'LIST' }],
     }),
-    updateURL: builder.mutation<URL, { id: number; data: URLUpdate }>({
+    updateURL: builder.mutation<MonitoredURL, { id: number; data: URLUpdate }>({
       query: ({ id, data }) => ({
         url: `/api/urls/${id}`,
         method: 'PATCH',

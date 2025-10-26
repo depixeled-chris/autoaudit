@@ -65,6 +65,7 @@ export interface Check {
   compliance_status: string;
   summary: string;
   llm_input_path: string | null;
+  llm_input_text: string | null;
   report_path: string | null;
   checked_at: string;
   violations?: Violation[];
@@ -100,7 +101,7 @@ export const checksApi = createApi({
     getLatestCheckForUrl: builder.query<Check | null, number>({
       query: (urlId) => ({
         url: `/api/checks`,
-        params: { url_id: urlId, limit: 1 },
+        params: { url_id: urlId, limit: 1, include_details: true },
       }),
       transformResponse: (response: Check[]) => {
         return response.length > 0 ? response[0] : null;

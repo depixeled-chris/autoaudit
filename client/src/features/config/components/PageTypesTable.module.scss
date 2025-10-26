@@ -1,0 +1,193 @@
+@use '@styles/variables.scss' as *;
+
+.loading {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.tableHeader {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: $spacing-lg;
+}
+
+.createForm {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  label {
+    font-weight: 600;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+  }
+}
+
+.input {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  border: 2px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-background;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-text-secondary;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    background: $color-background;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+  }
+}
+
+.helpText {
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  line-height: 1.4;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: $spacing-md;
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.pageTypesTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  thead {
+    background-color: $color-surface;
+    border-bottom: 2px solid $color-border;
+
+    th {
+      text-align: left;
+      padding: $spacing-md;
+      font-weight: 600;
+      font-size: $font-size-xs;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: $color-text-secondary;
+      white-space: nowrap;
+
+      &:last-child {
+        text-align: center;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background-color: $color-surface;
+      }
+
+      &.inactive {
+        opacity: 0.5;
+      }
+    }
+
+    td {
+      padding: $spacing-md;
+      vertical-align: middle;
+    }
+  }
+}
+
+.codeCell {
+  code {
+    padding: $spacing-xs $spacing-sm;
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    font-family: 'Courier New', monospace;
+    font-size: $font-size-xs;
+    color: $color-primary;
+  }
+}
+
+.nameCell,
+.descriptionCell {
+  min-width: 200px;
+}
+
+.editable {
+  cursor: pointer;
+  display: block;
+  padding: $spacing-xs;
+  border-radius: $radius-sm;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
+
+.inlineInput {
+  width: 100%;
+  padding: $spacing-xs $spacing-sm;
+  border: 2px solid $color-primary;
+  border-radius: $radius-sm;
+  background: $color-background;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.emptyCell {
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+.actionsCell {
+  text-align: center;
+  min-width: 120px;
+}
+
+.actionButtons {
+  display: inline-flex;
+  gap: $spacing-xs;
+}
+
+.editActions {
+  display: flex;
+  gap: $spacing-xs;
+  justify-content: center;
+}

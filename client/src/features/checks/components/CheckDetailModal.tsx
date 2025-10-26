@@ -1,5 +1,6 @@
-import { X, RefreshCw, CheckCircle, AlertTriangle, XCircle, HelpCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, AlertTriangle, XCircle, FileText, Eye, Download } from 'lucide-react';
 import type { Check } from '../checksApi';
+import { Modal } from '@components/ui/Modal/Modal';
 import { Button } from '@components/ui/Button';
 import { Badge } from '@components/ui/Badge';
 import styles from './CheckDetailModal.module.scss';
@@ -19,8 +20,6 @@ export const CheckDetailModal = ({
   onRescan,
   isRescanning = false,
 }: CheckDetailModalProps) => {
-  if (!isOpen) return null;
-
   // Determine status display
   const getStatusInfo = () => {
     const status = check.compliance_status.toLowerCase();
@@ -80,8 +79,8 @@ export const CheckDetailModal = ({
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <Modal isOpen={isOpen} onClose={onClose} size="large" showCloseButton={false}>
+      <div className={styles.modalContent}>
         {isRescanning && (
           <div className={styles.rescanBanner}>
             <RefreshCw size={16} className={styles.spinning} />
@@ -89,14 +88,11 @@ export const CheckDetailModal = ({
           </div>
         )}
 
-        <div className={styles.header}>
-          <div className={styles.headerContent}>
+        <div className={styles.headerSection}>
+          <div>
             <h2>Compliance Check Details</h2>
             <p className={styles.url}>{check.url}</p>
           </div>
-          <button className={styles.closeButton} onClick={onClose}>
-            <X size={20} />
-          </button>
         </div>
 
         <div className={styles.body}>
@@ -275,6 +271,90 @@ export const CheckDetailModal = ({
               <span className={styles.metadataValue}>{check.id}</span>
             </div>
           </div>
+
+          {/* Raw Data / Debug Section */}
+          <div className={styles.section}>
+            <h3>Raw Scan Data</h3>
+            <p className={styles.debugDescription}>
+              Review the actual data that was analyzed by the AI. Use this to verify the AI's assessment and fine-tune rules.
+            </p>
+            <div className={styles.debugButtons}>
+              {check.llm_input_text && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                      newWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>LLM Input - Check ${check.id}</title>
+                            <style>
+                              body {
+                                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                line-height: 1.6;
+                                max-width: 1000px;
+                                margin: 0 auto;
+                                padding: 20px;
+                                background: #f5f5f5;
+                              }
+                              pre {
+                                background: white;
+                                padding: 20px;
+                                border-radius: 8px;
+                                overflow-x: auto;
+                                white-space: pre-wrap;
+                                word-wrap: break-word;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <h1>LLM Input - Check ${check.id}</h1>
+                            <p><strong>URL:</strong> ${check.url}</p>
+                            <p><strong>State:</strong> ${check.state_code}</p>
+                            <hr>
+                            <pre>${check.llm_input_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                          </body>
+                        </html>
+                      `);
+                      newWindow.document.close();
+                    }
+                  }}
+                >
+                  <FileText size={16} />
+                  View Scraped Text
+                </Button>
+              )}
+              {check.report_path && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => window.open(`${import.meta.env.VITE_API_URL}/api/reports/${check.id}/markdown`, '_blank')}
+                >
+                  <Download size={16} />
+                  Download Report
+                </Button>
+              )}
+              {check.visual_verifications && check.visual_verifications.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => {
+                    const screenshot = check.visual_verifications?.[0]?.screenshot_path;
+                    if (screenshot) {
+                      const filename = screenshot.split('/').pop() || screenshot;
+                      window.open(`${import.meta.env.VITE_API_URL}/api/reports/screenshots/${filename}`, '_blank');
+                    }
+                  }}
+                >
+                  <Eye size={16} />
+                  View Screenshot
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className={styles.footer}>
@@ -302,6 +382,6 @@ export const CheckDetailModal = ({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

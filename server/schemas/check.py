@@ -109,6 +109,7 @@ class CheckResponse(BaseModel):
     compliance_status: str = Field(..., description="Compliance status")
     summary: str = Field(..., description="Summary of findings")
     llm_input_path: Optional[str] = Field(None, description="LLM input file path")
+    llm_input_text: Optional[str] = Field(None, description="LLM input text content")
     report_path: Optional[str] = Field(None, description="Report file path")
     checked_at: str = Field(..., description="Check timestamp")
     violations: Optional[List[ViolationResponse]] = Field(None, description="Violations found")

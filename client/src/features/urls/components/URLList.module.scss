@@ -7,95 +7,68 @@
   color: $color-text-secondary;
 }
 
-.urlList {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
+.tableContainer {
+  overflow-x: auto;
 }
 
-.urlRow {
-  border: 1px solid $color-border;
-  border-radius: $radius-md;
-  background-color: $color-background;
-  transition: all $transition-fast;
-
-  &.inactive {
-    opacity: 0.6;
-  }
-
-  &:hover {
-    box-shadow: $shadow-sm;
-  }
-}
-
-.urlHeader {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
-  cursor: pointer;
-  user-select: none;
-
-  &:hover {
-    background-color: $color-surface;
-  }
-}
-
-.urlActions {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  margin-left: auto;
-}
-
-.expandButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $color-text-secondary;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: color $transition-fast;
-
-  &:hover {
-    color: $color-text-primary;
-  }
-}
-
-.urlInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.urlMain {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-}
-
-.urlText {
-  flex: 1;
+.urlTable {
+  width: 100%;
+  border-collapse: collapse;
   font-size: $font-size-sm;
-  color: $color-text-primary;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+  thead {
+    background-color: $color-surface;
+    border-bottom: 2px solid $color-border;
+
+    th {
+      text-align: left;
+      padding: $spacing-md;
+      font-weight: 600;
+      font-size: $font-size-xs;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: $color-text-secondary;
+      white-space: nowrap;
+
+      &:last-child {
+        text-align: center;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background-color: $color-surface;
+      }
+
+      &.inactive {
+        opacity: 0.5;
+      }
+    }
+
+    td {
+      padding: $spacing-md;
+      vertical-align: middle;
+    }
+  }
 }
 
-.externalLink {
+.urlCell {
+  max-width: 400px;
+}
+
+.urlLink {
   display: inline-flex;
   align-items: center;
   gap: $spacing-xs;
   color: $color-primary;
   text-decoration: none;
   transition: color $transition-fast;
-  flex: 1;
-  min-width: 0;
+  max-width: 100%;
 
   &:hover {
     text-decoration: underline;
@@ -103,69 +76,39 @@
 
   svg {
     flex-shrink: 0;
-    color: $color-text-secondary;
-  }
-
-  .urlText {
-    flex: 1;
-    font-size: $font-size-sm;
-    color: $color-text-primary;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.urlMeta {
-  display: flex;
-  align-items: center;
-  gap: $spacing-sm;
-  flex-wrap: wrap;
-}
-
-.urlDetails {
-  padding: $spacing-lg;
-  padding-top: 0;
-  border-top: 1px solid $color-border;
-  background-color: $color-surface;
-}
-
-.detailsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: $spacing-lg;
-  margin-bottom: $spacing-lg;
-}
-
-.detailItem {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-sm;
-
-  svg {
     color: $color-text-muted;
-    flex-shrink: 0;
-    margin-top: 2px;
   }
 }
 
-.detailLabel {
-  font-size: $font-size-xs;
-  color: $color-text-secondary;
-  margin-bottom: $spacing-xs;
+.urlText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.detailValue {
-  font-size: $font-size-sm;
+.scanCount {
+  text-align: center;
+  font-weight: 600;
   color: $color-text-primary;
-  font-weight: 500;
 }
 
-.actions {
-  display: flex;
-  gap: $spacing-sm;
-  padding-top: $spacing-md;
-  border-top: 1px solid $color-border;
+.dateCell {
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.emptyCell {
+  color: $color-text-muted;
+  font-style: italic;
+}
+
+.actionsCell {
+  text-align: center;
+}
+
+.actionButtons {
+  display: inline-flex;
+  gap: $spacing-xs;
 }
 
 .spinning {

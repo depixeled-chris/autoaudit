@@ -92,12 +92,11 @@ class IntelligentSetupService(BaseService):
                         raise
 
             # Step 6: Create URLs with appropriate frequencies
+            page_urls = analysis_result.get('page_urls', {})
             urls_created = await self._create_monitoring_urls(
                 project_id=project.id,
                 base_url=base_url,
-                homepage_url=analysis_result.get('homepage_url', base_url),
-                inventory_url=analysis_result.get('inventory_url'),
-                sample_vdp_url=analysis_result.get('sample_vdp_url'),
+                page_urls=page_urls,
                 platform=platform
             )
 
@@ -162,7 +161,7 @@ class IntelligentSetupService(BaseService):
                 logger.error(f"Failed to initialize ComplianceAnalyzer: {str(e)}")
                 raise
 
-        prompt = f"""Analyze this dealership website to extract key information.
+        prompt = f"""Analyze this dealership website to extract key information and identify all major page types.
 
 URL: {url}
 Detected Platform: {platform}
@@ -173,33 +172,55 @@ Detected Platform: {platform}
 
 # Task
 
-Extract the following information from this dealership website:
+Extract dealership information and identify URLs for different page types:
 
 1. **Dealership Name**: The official name of the dealership
 2. **State Code**: Two-letter US state code (e.g., OK, CA, TX, NY)
-3. **Homepage URL**: The main homepage URL (if different from provided URL)
-4. **Inventory Page URL**: URL to the inventory/search/browse vehicles page (look for links like "Inventory", "Search Inventory", "Browse Vehicles", etc.)
+3. **Page URLs**: Find links to the following page types (set to null if not found):
+   - homepage: Main homepage/landing page
+   - new_inventory: New vehicle inventory listing
+   - used_inventory: Used vehicle inventory listing
+   - inventory: General inventory page (if new/used not separated)
+   - specials: Special offers/promotions page
+   - financing: Finance/payment calculator page
+   - lease: Lease calculator/offers page
+   - service: Service department page
+   - parts: Parts department page
+   - cpo: Certified pre-owned inventory
+   - trade_in: Trade-in value calculator
+   - contact: Contact us page
 
 Respond in JSON format:
 
 {{
     "dealership_name": "<name>",
     "state_code": "<XX>",
-    "homepage_url": "<url or null>",
-    "inventory_url": "<url or null>",
+    "page_urls": {{
+        "homepage": "<url or null>",
+        "new_inventory": "<url or null>",
+        "used_inventory": "<url or null>",
+        "inventory": "<url or null>",
+        "specials": "<url or null>",
+        "financing": "<url or null>",
+        "lease": "<url or null>",
+        "service": "<url or null>",
+        "parts": "<url or null>",
+        "cpo": "<url or null>",
+        "trade_in": "<url or null>",
+        "contact": "<url or null>"
+    }},
     "confidence": {{
         "dealership_name": <0.0-1.0>,
-        "state_code": <0.0-1.0>,
-        "inventory_url": <0.0-1.0>
+        "state_code": <0.0-1.0>
     }},
     "reasoning": "<brief explanation of how you determined these values>"
 }}
 
 **Important**:
-- If you cannot determine a value with confidence, set it to null
+- Only include URLs you can confidently identify from navigation links or page content
 - State code must be a valid 2-letter US state code
 - URLs should be complete (starting with http:// or https://)
-- Set confidence scores based on how certain you are
+- If a dealership doesn't separate new/used inventory, use the general "inventory" URL
 """
 
         try:
@@ -306,9 +327,7 @@ Respond in JSON format:
         self,
         project_id: int,
         base_url: str,
-        homepage_url: Optional[str],
-        inventory_url: Optional[str],
-        sample_vdp_url: Optional[str],
+        page_urls: Dict[str, Optional[str]],
         platform: str
     ) -> List[Dict]:
         """
@@ -317,9 +336,7 @@ Respond in JSON format:
         Args:
             project_id: Project ID
             base_url: Base URL of the dealership
-            homepage_url: Homepage URL (if different from base)
-            inventory_url: Inventory page URL
-            sample_vdp_url: Sample VDP URL
+            page_urls: Dictionary of page_type -> URL mappings
             platform: Detected platform
 
         Returns:
@@ -327,45 +344,89 @@ Respond in JSON format:
         """
         created_urls = []
 
-        # Homepage: once per day (24 hours)
-        homepage = homepage_url or base_url
+        # Define check frequencies for each page type (in hours)
+        # Key pages checked more frequently, static pages less frequently
+        frequency_map = {
+            'homepage': 24,          # Daily
+            'new_inventory': 168,    # Weekly
+            'used_inventory': 168,   # Weekly
+            'inventory': 168,        # Weekly
+            'specials': 48,          # Every 2 days (promotions change frequently)
+            'financing': 168,        # Weekly
+            'lease': 168,            # Weekly
+            'service': 720,          # Monthly
+            'parts': 720,            # Monthly
+            'cpo': 168,              # Weekly
+            'trade_in': 720,         # Monthly
+            'contact': 8760,         # Yearly (rarely changes)
+        }
+
+        # Always create homepage
+        homepage = page_urls.get('homepage') or base_url
         url_id = self.db.add_url(
             url=homepage,
             project_id=project_id,
-            url_type="homepage",
+            url_type="HOMEPAGE",
             platform=platform if platform != 'unknown' else None,
-            check_frequency_hours=24
+            check_frequency_hours=frequency_map['homepage']
         )
         created_urls.append(self.db.get_url(url_id=url_id))
-        logger.info(f"Created homepage URL: {homepage}")
+        logger.info(f"Created HOMEPAGE URL: {homepage}")
 
-        # Inventory: once every 7 days (168 hours)
-        if inventory_url:
-            url_id = self.db.add_url(
-                url=inventory_url,
-                project_id=project_id,
-                url_type="inventory",
-                platform=platform if platform != 'unknown' else None,
-                check_frequency_hours=168
-            )
-            created_urls.append(self.db.get_url(url_id=url_id))
-            logger.info(f"Created inventory URL: {inventory_url}")
+        # Create URLs for each detected page type
+        page_type_mapping = {
+            'new_inventory': 'NEW_INVENTORY',
+            'used_inventory': 'USED_INVENTORY',
+            'inventory': 'INVENTORY',
+            'specials': 'SPECIALS',
+            'financing': 'FINANCING',
+            'lease': 'LEASE',
+            'service': 'SERVICE',
+            'parts': 'PARTS',
+            'cpo': 'CPO',
+            'trade_in': 'TRADE_IN',
+            'contact': 'CONTACT',
+        }
 
-            # Try to find a sample VDP from the inventory page
-            if not sample_vdp_url:
-                sample_vdp_url = await self._find_sample_vdp(inventory_url, platform)
+        for key, url_type_code in page_type_mapping.items():
+            url = page_urls.get(key)
+            if url:
+                try:
+                    url_id = self.db.add_url(
+                        url=url,
+                        project_id=project_id,
+                        url_type=url_type_code,
+                        platform=platform if platform != 'unknown' else None,
+                        check_frequency_hours=frequency_map.get(key, 720)
+                    )
+                    created_urls.append(self.db.get_url(url_id=url_id))
+                    logger.info(f"Created {url_type_code} URL: {url}")
+                except Exception as e:
+                    logger.warning(f"Failed to create {url_type_code} URL: {str(e)}")
+
+        # Try to find a sample VDP from inventory pages if not explicitly found
+        sample_vdp_url = None
+        for inv_key in ['new_inventory', 'used_inventory', 'inventory']:
+            inv_url = page_urls.get(inv_key)
+            if inv_url:
+                sample_vdp_url = await self._find_sample_vdp(inv_url, platform)
+                if sample_vdp_url:
+                    break
 
         # Sample VDP: scrape once only (9999 hours = effectively once)
         if sample_vdp_url:
-            url_id = self.db.add_url(
-                url=sample_vdp_url,
-                project_id=project_id,
-                url_type="vdp",
-                platform=platform if platform != 'unknown' else None,
-                check_frequency_hours=9999  # Effectively once-only
-            )
-            created_urls.append(self.db.get_url(url_id=url_id))
-            logger.info(f"Created sample VDP URL: {sample_vdp_url}")
+            try:
+                url_id = self.db.add_url(
+                    url=sample_vdp_url,
+                    project_id=project_id,
+                    url_type="VDP",
+                    platform=platform if platform != 'unknown' else None,
+                    check_frequency_hours=9999  # Effectively once-only
+                )
+                created_urls.append(self.db.get_url(url_id=url_id))
+                logger.info(f"Created VDP URL: {sample_vdp_url}")
+            except Exception as e:
+                logger.warning(f"Failed to create VDP URL: {str(e)}")
 
         return created_urls
 

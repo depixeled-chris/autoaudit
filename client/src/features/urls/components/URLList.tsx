@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink, Clock, Tag, MoreVertical, RefreshCw, FileText } from 'lucide-react';
-import { useGetURLsQuery, useDeleteURLMutation, useUpdateURLMutation, useForceRescanURLMutation, type URL } from '../urlsApi';
+import { ExternalLink, RefreshCw, FileText, Trash2 } from 'lucide-react';
+import { useGetURLsQuery, useDeleteURLMutation, useUpdateURLMutation, useForceRescanURLMutation, type MonitoredURL } from '../urlsApi';
 import { useGetLatestCheckForUrlQuery } from '@features/checks/checksApi';
 import { CheckDetailModal } from '@features/checks/components/CheckDetailModal';
+import EditURLModal from './EditURLModal';
 import { Button } from '@components/ui/Button';
 import { Badge } from '@components/ui/Badge';
 import { Toggle } from '@components/ui/Toggle';
@@ -16,9 +17,9 @@ interface URLListProps {
 
 interface URLCheckModalProps {
   urlId: number;
-  url?: URL;
+  url?: MonitoredURL;
   onClose: () => void;
-  onRescan: (url: URL) => void;
+  onRescan: (url: MonitoredURL) => void;
   isRescanning: boolean;
 }
 
@@ -70,25 +71,15 @@ const URLCheckModal = ({ urlId, url, onClose, onRescan, isRescanning }: URLCheck
 
 export const URLList = ({ projectId }: URLListProps) => {
   const { data: urls, isLoading } = useGetURLsQuery({ project_id: projectId, active_only: false });
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [deleteURL] = useDeleteURLMutation();
   const [updateURL] = useUpdateURLMutation();
   const [forceRescan] = useForceRescanURLMutation();
   const [rescanningId, setRescanningId] = useState<number | null>(null);
   const [selectedUrlId, setSelectedUrlId] = useState<number | null>(null);
+  const [editingUrl, setEditingUrl] = useState<MonitoredURL | null>(null);
   const { toasts, removeToast, success, error, info } = useToast();
 
-  const toggleExpand = (id: number) => {
-    const newExpanded = new Set(expandedIds);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedIds(newExpanded);
-  };
-
-  const handleToggleActive = async (url: URL) => {
+  const handleToggleActive = async (url: MonitoredURL) => {
     try {
       await updateURL({ id: url.id, data: { active: !url.active } }).unwrap();
     } catch (error) {
@@ -115,7 +106,12 @@ export const URLList = ({ projectId }: URLListProps) => {
     setSelectedUrlId(null);
   };
 
-  const handleForceRescan = async (id: number, url: URL, event?: React.MouseEvent) => {
+  const handleSaveURL = async (id: number, data: Partial<MonitoredURL>) => {
+    await updateURL({ id, data }).unwrap();
+    success('URL settings updated successfully');
+  };
+
+  const handleForceRescan = async (id: number, url: MonitoredURL, event?: React.MouseEvent) => {
     if (event) {
       event.stopPropagation();
     }
@@ -204,130 +200,113 @@ export const URLList = ({ projectId }: URLListProps) => {
         onRescan={(url) => handleForceRescan(selectedUrlId, url)}
         isRescanning={rescanningId === selectedUrlId}
       />}
-      <div className={styles.urlList}>
-        {urls.map((url) => {
-          const isExpanded = expandedIds.has(url.id);
-
-        return (
-          <div key={url.id} className={`${styles.urlRow} ${!url.active ? styles.inactive : ''}`}>
-            <div className={styles.urlHeader} onClick={() => toggleExpand(url.id)}>
-              <button className={styles.expandButton}>
-                {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-              </button>
-
-              <div className={styles.urlInfo}>
-                <div className={styles.urlMain}>
+      <div className={styles.tableContainer}>
+        <table className={styles.urlTable}>
+          <thead>
+            <tr>
+              <th>URL</th>
+              <th>Type</th>
+              <th>Platform</th>
+              <th>Scans</th>
+              <th>Last Checked</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {urls.map((url) => (
+              <tr
+                key={url.id}
+                className={!url.active ? styles.inactive : ''}
+                onClick={() => setEditingUrl(url)}
+                style={{ cursor: 'pointer' }}
+              >
+                <td className={styles.urlCell} onClick={(e) => e.stopPropagation()}>
                   <a
                     href={url.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={styles.externalLink}
-                    onClick={(e) => e.stopPropagation()}
+                    className={styles.urlLink}
+                    title={url.url}
                   >
-                    <ExternalLink size={16} />
+                    <ExternalLink size={14} />
                     <span className={styles.urlText}>{url.url}</span>
                   </a>
-                </div>
-                <div className={styles.urlMeta}>
-                  {url.platform && <Badge variant="secondary">{url.platform}</Badge>}
+                </td>
+                <td>
                   <Badge variant="secondary">{url.url_type}</Badge>
-                  <Badge variant="info" title="Number of times this URL has been checked">
-                    {url.check_count} {url.check_count === 1 ? 'check' : 'checks'}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className={styles.urlActions} onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={(e) => handleViewDetails(url.id, e)}
-                  disabled={!url.last_checked}
-                  title={url.last_checked ? "View scan details" : "No scans yet"}
-                >
-                  <FileText size={16} />
-                </Button>
-                <Toggle
-                  checked={url.active}
-                  onChange={() => handleToggleActive(url)}
-                  size="small"
-                />
-                <Button
-                  variant="ghost"
-                  size="small"
-                  onClick={(e) => handleForceRescan(url.id, url, e)}
-                  disabled={rescanningId === url.id}
-                  title="Force rescan"
-                >
-                  <RefreshCw size={16} className={rescanningId === url.id ? styles.spinning : ''} />
-                </Button>
-              </div>
-            </div>
-
-            {isExpanded && (
-              <div className={styles.urlDetails}>
-                <div className={styles.detailsGrid}>
-                  <div className={styles.detailItem}>
-                    <Clock size={16} />
-                    <div>
-                      <div className={styles.detailLabel}>Check Frequency</div>
-                      <div className={styles.detailValue}>Every {url.check_frequency_hours}h</div>
-                    </div>
-                  </div>
-
-                  {url.template_id && (
-                    <div className={styles.detailItem}>
-                      <Tag size={16} />
-                      <div>
-                        <div className={styles.detailLabel}>Template</div>
-                        <div className={styles.detailValue}>{url.template_id}</div>
-                      </div>
-                    </div>
+                </td>
+                <td>
+                  {url.platform ? (
+                    <Badge variant="secondary">{url.platform}</Badge>
+                  ) : (
+                    <span className={styles.emptyCell}>—</span>
                   )}
-
-                  <div className={styles.detailItem}>
-                    <Clock size={16} />
-                    <div>
-                      <div className={styles.detailLabel}>Last Checked</div>
-                      <div className={styles.detailValue}>
-                        {url.last_checked ? new Date(url.last_checked).toLocaleString() : 'Never'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.detailItem}>
-                    <Clock size={16} />
-                    <div>
-                      <div className={styles.detailLabel}>Added</div>
-                      <div className={styles.detailValue}>
-                        {new Date(url.created_at).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.actions}>
-                  <Button
-                    variant={url.active ? 'secondary' : 'success'}
+                </td>
+                <td className={styles.scanCount}>
+                  {url.check_count}
+                </td>
+                <td className={styles.dateCell}>
+                  {url.last_checked ? (
+                    <span title={new Date(url.last_checked).toLocaleString()}>
+                      {new Date(url.last_checked).toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className={styles.emptyCell}>Never</span>
+                  )}
+                </td>
+                <td onClick={(e) => e.stopPropagation()}>
+                  <Toggle
+                    checked={url.active}
+                    onChange={() => handleToggleActive(url)}
                     size="small"
-                    onClick={() => handleToggleActive(url)}
-                  >
-                    {url.active ? 'Deactivate' : 'Activate'}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="small"
-                    onClick={() => handleDelete(url.id)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+                  />
+                </td>
+                <td className={styles.actionsCell} onClick={(e) => e.stopPropagation()}>
+                  <div className={styles.actionButtons}>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={(e) => handleViewDetails(url.id, e)}
+                      disabled={!url.last_checked}
+                      title={url.last_checked ? "View scan details" : "No scans yet"}
+                    >
+                      <FileText size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={(e) => handleForceRescan(url.id, url, e)}
+                      disabled={rescanningId === url.id}
+                      title="Rescan"
+                    >
+                      <RefreshCw size={16} className={rescanningId === url.id ? styles.spinning : ''} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => handleDelete(url.id)}
+                      title="Remove"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {editingUrl && (
+        <EditURLModal
+          url={editingUrl}
+          isOpen={true}
+          onClose={() => setEditingUrl(null)}
+          onSave={handleSaveURL}
+          onDelete={handleDelete}
+        />
+      )}
     </>
   );
 };

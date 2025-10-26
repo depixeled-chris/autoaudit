@@ -33,6 +33,7 @@ class URLCreate(BaseModel):
 class URLUpdate(BaseModel):
     """Request model for updating a URL."""
     active: Optional[bool] = Field(None, description="Active status")
+    url_type: Optional[str] = Field(None, description="Type of page (vdp, homepage, inventory)")
     check_frequency_hours: Optional[int] = Field(None, ge=1, le=168, description="Check frequency in hours")
     template_id: Optional[str] = Field(None, description="Template ID")
 
@@ -60,6 +61,7 @@ class URLResponse(BaseModel):
     check_frequency_hours: int = Field(..., description="Check frequency")
     last_checked: Optional[str] = Field(None, description="Last check timestamp")
     created_at: str = Field(..., description="Creation timestamp")
+    check_count: int = Field(0, description="Number of compliance checks performed")
 
     model_config = {
         "json_schema_extra": {

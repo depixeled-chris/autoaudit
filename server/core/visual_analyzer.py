@@ -70,7 +70,8 @@ class VisualComplianceAnalyzer:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/png;base64,{screenshot_b64}"
+                                    "url": f"data:image/png;base64,{screenshot_b64}",
+                                    "detail": "high"
                                 }
                             }
                         ]
@@ -84,8 +85,13 @@ class VisualComplianceAnalyzer:
             import json
             result = json.loads(result_text)
 
-            result["tokens_used"] = response.usage.total_tokens
+            result["token_usage"] = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
+            }
             result["verification_method"] = "visual"
+            result["model_used"] = "gpt-4o"
 
             logger.info(f"Visual verification complete. Compliant: {result.get('is_compliant')}")
             return result
@@ -97,7 +103,9 @@ class VisualComplianceAnalyzer:
     def _build_visual_prompt(self, rule: str, context: Dict[str, str]) -> str:
         """Build the prompt for visual analysis."""
 
-        prompt = f"""You are analyzing a screenshot of an auto dealership webpage to verify visual compliance.
+        prompt = f"""You are analyzing a FULL-PAGE screenshot of an auto dealership webpage to verify visual compliance.
+
+**IMPORTANT:** This is a full-page screenshot that may be very tall. Analyze the ENTIRE image from top to bottom, including the header, footer, and all content sections.
 
 **Rule to Verify:**
 {rule}
@@ -107,11 +115,12 @@ class VisualComplianceAnalyzer:
 - State: {context.get('state', 'N/A')}
 
 **Your Task:**
-Look at the screenshot and determine if the rule is visually compliant. Focus on:
+Look at the COMPLETE screenshot (from top to bottom) and determine if the rule is visually compliant. Focus on:
 - Spatial positioning and proximity
 - Visual hierarchy (font size, placement, prominence)
 - Whether a typical consumer would easily see the required information
 - Actual layout as rendered, not theoretical placement
+- Elements may be in the header, footer, sidebar, or anywhere on the page
 
 **Analysis Framework:**
 1. **Locate the relevant elements** (price, vehicle info, disclaimers, etc.)

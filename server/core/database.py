@@ -508,12 +508,23 @@ class ComplianceDatabase:
         return cursor.lastrowid
 
     def get_url(self, url_id: int = None, url: str = None) -> Optional[Dict]:
-        """Get URL by ID or URL string."""
+        """Get URL by ID or URL string with check count."""
         cursor = self.conn.cursor()
+
+        query = """
+            SELECT
+                u.*,
+                COUNT(c.id) as check_count
+            FROM urls u
+            LEFT JOIN compliance_checks c ON c.url_id = u.id
+        """
+
         if url_id:
-            cursor.execute("SELECT * FROM urls WHERE id = ?", (url_id,))
+            query += " WHERE u.id = ? GROUP BY u.id"
+            cursor.execute(query, (url_id,))
         elif url:
-            cursor.execute("SELECT * FROM urls WHERE url = ?", (url,))
+            query += " WHERE u.url = ? GROUP BY u.id"
+            cursor.execute(query, (url,))
         else:
             return None
 
@@ -611,7 +622,8 @@ class ComplianceDatabase:
         url_id: int = None,
         text_analysis_tokens: int = 0,
         visual_tokens: int = 0,
-        total_tokens: int = 0
+        total_tokens: int = 0,
+        llm_input_text: str = None
     ) -> int:
         """Save a compliance check result with token usage tracking."""
         # Get or create URL
@@ -629,10 +641,10 @@ class ComplianceDatabase:
         cursor.execute("""
             INSERT INTO compliance_checks
             (url_id, url, state_code, template_id, overall_score, compliance_status,
-             summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens, llm_input_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (url_id, url, state_code, template_id, overall_score, compliance_status,
-              summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens))
+              summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens, llm_input_text))
         self.conn.commit()
         logger.info(f"Saved compliance check for {url}: {overall_score}/100")
         return cursor.lastrowid
@@ -878,6 +890,104 @@ class ComplianceDatabase:
             "total_text_tokens": token_stats[0] or 0,
             "total_visual_tokens": token_stats[1] or 0,
             "total_tokens": token_stats[2] or 0
+        }
+
+    def save_llm_call(
+        self,
+        check_id: int,
+        call_type: str,
+        model: str,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int = 0
+    ) -> int:
+        """
+        Save an individual LLM API call record.
+
+        Args:
+            check_id: ID of the compliance check
+            call_type: Type of call (e.g., 'text_analysis', 'visual_verification')
+            model: Model used (e.g., 'gpt-4o-mini', 'gpt-4o')
+            prompt_tokens: Number of prompt tokens
+            completion_tokens: Number of completion tokens
+            total_tokens: Total tokens used
+
+        Returns:
+            ID of the created llm_call record
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO llm_calls
+            (check_id, call_type, model, prompt_tokens, completion_tokens, total_tokens)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (check_id, call_type, model, prompt_tokens, completion_tokens, total_tokens))
+        self.conn.commit()
+        return cursor.lastrowid
+
+    def get_llm_calls(self, check_id: int) -> List[Dict]:
+        """
+        Get all LLM calls for a compliance check.
+
+        Args:
+            check_id: ID of the compliance check
+
+        Returns:
+            List of LLM call records
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM llm_calls
+            WHERE check_id = ?
+            ORDER BY created_at
+        """, (check_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_llm_call_stats(self, check_id: int) -> Dict:
+        """
+        Get aggregated statistics for LLM calls in a check.
+
+        Args:
+            check_id: ID of the compliance check
+
+        Returns:
+            Dictionary with aggregated token counts by call type
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT
+                call_type,
+                model,
+                COUNT(*) as call_count,
+                SUM(prompt_tokens) as total_prompt_tokens,
+                SUM(completion_tokens) as total_completion_tokens,
+                SUM(total_tokens) as total_tokens
+            FROM llm_calls
+            WHERE check_id = ?
+            GROUP BY call_type, model
+        """, (check_id,))
+
+        results = [dict(row) for row in cursor.fetchall()]
+
+        # Also get grand total
+        cursor.execute("""
+            SELECT
+                SUM(prompt_tokens) as total_prompt_tokens,
+                SUM(completion_tokens) as total_completion_tokens,
+                SUM(total_tokens) as total_tokens
+            FROM llm_calls
+            WHERE check_id = ?
+        """, (check_id,))
+
+        totals_row = cursor.fetchone()
+        totals = dict(totals_row) if totals_row else {
+            'total_prompt_tokens': 0,
+            'total_completion_tokens': 0,
+            'total_tokens': 0
+        }
+
+        return {
+            'by_type': results,
+            'totals': totals
         }
 
     def close(self):

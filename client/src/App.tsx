@@ -6,6 +6,7 @@ import { ModalProvider } from '@contexts/ModalContext';
 import { AuthGate, AuthModal } from '@features/auth';
 import { Layout } from '@components/layout';
 import { ProjectsPage, ProjectDetailPage } from '@features/projects';
+import { ConfigPage } from '@/pages/ConfigPage';
 import { setAxiosStore } from '@lib/api/axios';
 import '@styles/global.scss';
 
@@ -23,6 +24,7 @@ function App() {
                 <Routes>
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                  <Route path="/config" element={<ConfigPage />} />
                   <Route path="/" element={<Navigate to="/projects" replace />} />
                   <Route path="*" element={<Navigate to="/projects" replace />} />
                 </Routes>

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Folder, LogOut } from 'lucide-react';
+import { Folder, LogOut, Settings } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { logout } from '@store/slices/authSlice';
 import { ThemeToggle } from '@components/ui/ThemeToggle';
@@ -50,15 +50,26 @@ export function Layout({ children }: LayoutProps) {
 
         <nav className={styles.nav}>
           {isAuthenticated && (
-            <NavLink
-              to="/projects"
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.active : ''}`
-              }
-            >
-              <Folder className={styles.navIcon} />
-              <span>Projects</span>
-            </NavLink>
+            <>
+              <NavLink
+                to="/projects"
+                className={({ isActive }) =>
+                  `${styles.navItem} ${isActive ? styles.active : ''}`
+                }
+              >
+                <Folder className={styles.navIcon} />
+                <span>Projects</span>
+              </NavLink>
+              <NavLink
+                to="/config"
+                className={({ isActive }) =>
+                  `${styles.navItem} ${isActive ? styles.active : ''}`
+                }
+              >
+                <Settings className={styles.navIcon} />
+                <span>Config</span>
+              </NavLink>
+            </>
           )}
         </nav>
       </aside>

@@ -1,0 +1,133 @@
+@import '@styles/variables';
+
+.modal {
+}
+
+.urlDisplay {
+  margin-bottom: $spacing-lg;
+  padding: $spacing-md;
+  background: $color-surface;
+  border-radius: $radius-md;
+
+  label {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.urlText {
+  color: $color-text-primary;
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+  word-break: break-all;
+}
+
+.formGroup {
+  margin-bottom: $spacing-lg;
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: $spacing-sm;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+  }
+}
+
+.select,
+.input {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  border: 2px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  transition: all 0.2s;
+  font-family: inherit;
+
+  &:hover {
+    border-color: $color-text-secondary;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    background: $color-background;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right $spacing-sm center;
+  padding-right: calc(#{$spacing-md} + 24px);
+}
+
+.input[type='number'] {
+  max-width: 200px;
+}
+
+.helpText {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-muted;
+  line-height: 1.4;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  label {
+    margin: 0;
+  }
+}
+
+.infoSection {
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm;
+  background: $color-surface;
+  border-radius: $radius-md;
+
+  label {
+    display: block;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+  }
+}
+
+.infoValue {
+  color: $color-text-primary;
+  font-family: $font-family-mono;
+  font-size: $font-size-sm;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: $spacing-xl;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border;
+}
+
+.deleteSection {
+  // Left side
+}
+
+.mainActions {
+  display: flex;
+  gap: $spacing-md;
+}

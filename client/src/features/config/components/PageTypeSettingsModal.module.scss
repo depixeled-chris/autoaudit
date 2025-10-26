@@ -1,0 +1,99 @@
+@use '@styles/variables.scss' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-2xl;
+}
+
+.section {
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    margin: 0 0 $spacing-xs;
+    color: $color-text-primary;
+  }
+}
+
+.helpText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin: 0 0 $spacing-md;
+  line-height: 1.5;
+}
+
+.textarea {
+  width: 100%;
+  padding: $spacing-md;
+  border: 2px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-background;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: $color-text-secondary;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &::placeholder {
+    color: $color-text-muted;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+.toggleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  transition: background-color $transition-fast;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+}
+
+.toggleLabel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  flex: 1;
+
+  strong {
+    color: $color-text-primary;
+    font-size: $font-size-base;
+  }
+}
+
+.toggleDescription {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border;
+}
