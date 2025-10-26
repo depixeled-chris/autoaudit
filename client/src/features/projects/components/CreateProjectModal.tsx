@@ -2,7 +2,9 @@ import { useState, FormEvent } from 'react';
 import { Modal } from '@components/ui/Modal';
 import { Input, Textarea } from '@components/ui/Input';
 import { Button } from '@components/ui/Button';
-import { useCreateProjectMutation } from '../projectsApi';
+import { useCreateProjectMutation, projectsApi } from '../projectsApi';
+import { useDispatch } from 'react-redux';
+import { Loader2, Sparkles } from 'lucide-react';
 import styles from './CreateProjectModal.module.scss';
 
 export interface CreateProjectModalProps {
@@ -10,8 +12,15 @@ export interface CreateProjectModalProps {
   onClose: () => void;
 }
 
+type SetupMode = 'intelligent' | 'manual';
+
 export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
+  const dispatch = useDispatch();
   const [createProject, { isLoading }] = useCreateProjectMutation();
+  const [mode, setMode] = useState<SetupMode>('intelligent');
+  const [intelligentUrl, setIntelligentUrl] = useState('');
+  const [setupStatus, setSetupStatus] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     state_code: '',
@@ -62,15 +71,123 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     }
   };
 
+  const handleIntelligentSetup = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!intelligentUrl.trim()) {
+      setErrors({ url: 'URL is required' });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setSetupStatus('Analyzing website...');
+    setErrors({});
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/intelligent-setup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: intelligentUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to analyze website');
+      }
+
+      const result = await response.json();
+      console.log('Intelligent setup result:', result);
+
+      // Invalidate projects cache to refresh the list
+      dispatch(projectsApi.util.invalidateTags(['Project']));
+
+      setIntelligentUrl('');
+      setSetupStatus('');
+      onClose();
+    } catch (error) {
+      console.error('Intelligent setup failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Setup failed. Please try manual mode.';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleClose = () => {
     setFormData({ name: '', state_code: '', description: '', base_url: '' });
+    setIntelligentUrl('');
+    setSetupStatus('');
     setErrors({});
+    setMode('intelligent');
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Create New Project" size="medium">
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <div className={styles.modeSelector}>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${mode === 'intelligent' ? styles.active : ''}`}
+          onClick={() => setMode('intelligent')}
+        >
+          <Sparkles size={16} />
+          Intelligent Setup
+        </button>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
+          onClick={() => setMode('manual')}
+        >
+          Manual Setup
+        </button>
+      </div>
+
+      {mode === 'intelligent' ? (
+        <form onSubmit={handleIntelligentSetup} className={styles.form}>
+          <div className={styles.intelligentInfo}>
+            <p>Enter any dealership website URL. We'll automatically detect:</p>
+            <ul>
+              <li>Dealership name and location</li>
+              <li>Homepage and inventory pages</li>
+              <li>Sample vehicle listings</li>
+              <li>Recommended check frequencies</li>
+            </ul>
+          </div>
+
+          <Input
+            id="intelligent-url"
+            label="Website URL"
+            value={intelligentUrl}
+            onChange={(e) => setIntelligentUrl(e.target.value)}
+            error={errors.url}
+            placeholder="https://www.dealership.com"
+            type="url"
+            required
+            disabled={isAnalyzing}
+          />
+
+          {setupStatus && (
+            <div className={styles.setupStatus}>
+              <Loader2 className={styles.spinner} size={16} />
+              {setupStatus}
+            </div>
+          )}
+
+          {errors.submit && <div className={styles.submitError}>{errors.submit}</div>}
+
+          <div className={styles.actions}>
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={isAnalyzing}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={isAnalyzing}>
+              {isAnalyzing ? 'Analyzing...' : 'Start Intelligent Setup'}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit} className={styles.form}>
         <Input
           id="name"
           label="Project Name"
@@ -113,15 +230,16 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
         {errors.submit && <div className={styles.submitError}>{errors.submit}</div>}
 
-        <div className={styles.actions}>
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={isLoading}>
-            {isLoading ? 'Creating...' : 'Create Project'}
-          </Button>
-        </div>
-      </form>
+          <div className={styles.actions}>
+            <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Project'}
+            </Button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
 }

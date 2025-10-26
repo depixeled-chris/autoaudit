@@ -1,4 +1,5 @@
 export { ProjectsPage } from './pages/ProjectsPage';
+export { ProjectDetailPage } from './pages/ProjectDetailPage';
 export { CreateProjectModal } from './components/CreateProjectModal';
 export {
   projectsApi,

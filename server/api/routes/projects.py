@@ -5,15 +5,21 @@ from typing import List
 import sys
 from pathlib import Path
 import asyncio
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from schemas.project import ProjectCreate, ProjectResponse, ProjectSummary
+from schemas.project import ProjectCreate, ProjectResponse, ProjectSummary, IntelligentSetupRequest, IntelligentSetupResponse
 from services.project_service import ProjectService
 from services.screenshot_service import ScreenshotService
-from api.dependencies import get_project_service
+from services.intelligent_setup_service import IntelligentSetupService
+from api.dependencies import get_project_service, get_current_user
 from core.database import ComplianceDatabase
 from core.config import DATABASE_PATH
+from typing import Dict
 
 router = APIRouter()
 
@@ -21,7 +27,8 @@ router = APIRouter()
 @router.post("/", response_model=ProjectResponse, status_code=201)
 async def create_project(
     project: ProjectCreate,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     Create a new project.
@@ -35,7 +42,10 @@ async def create_project(
 
 
 @router.get("/", response_model=List[ProjectResponse])
-async def list_projects(service: ProjectService = Depends(get_project_service)):
+async def list_projects(
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
+):
     """
     List all projects.
 
@@ -47,7 +57,8 @@ async def list_projects(service: ProjectService = Depends(get_project_service)):
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     Get a specific project by ID.
@@ -61,7 +72,8 @@ async def get_project(
 @router.get("/{project_id}/summary", response_model=ProjectSummary)
 async def get_project_summary(
     project_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     Get project summary statistics.
@@ -82,7 +94,8 @@ async def get_project_summary(
 @router.delete("/{project_id}", status_code=204)
 async def delete_project(
     project_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     Delete a project.
@@ -106,7 +119,8 @@ async def delete_project(
 async def capture_project_screenshot(
     project_id: int,
     background_tasks: BackgroundTasks,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     Capture a screenshot of the project's base URL.
@@ -136,3 +150,38 @@ async def capture_project_screenshot(
     background_tasks.add_task(capture_screenshot)
 
     return project
+
+
+@router.post("/intelligent-setup", response_model=IntelligentSetupResponse, status_code=201)
+async def intelligent_project_setup(
+    request: IntelligentSetupRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """
+    Intelligently set up a project from a single URL.
+
+    This endpoint:
+    1. Scrapes the provided URL
+    2. Uses LLM to analyze and extract dealership information (name, location, platform)
+    3. Attempts to find the inventory page
+    4. Scrapes inventory to find a sample VDP
+    5. Creates a project with the extracted information
+    6. Creates monitoring URLs with appropriate frequencies:
+       - Homepage: once per day (24 hours)
+       - Inventory: once every 7 days (168 hours)
+       - VDP: scrape once only (9999 hours)
+
+    Returns the created project and summary of the setup process.
+    """
+    db = ComplianceDatabase(DATABASE_PATH)
+    try:
+        service = IntelligentSetupService(db)
+        result = await service.setup_from_url(request.url)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Intelligent setup failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Setup failed: {str(e)}")
+    finally:
+        db.close()

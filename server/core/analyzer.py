@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 
 from .config import StateRules, OPENAI_MODEL, MAX_TOKENS, TEMPERATURE
+from .url_type_preambles import get_preamble, get_url_type_name
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +36,8 @@ class ComplianceAnalyzer:
         self,
         content: str,
         state_rules: StateRules,
-        url: str = ""
+        url: str = "",
+        url_type: str = "VDP"
     ) -> Dict:
         """
         Analyze content for compliance violations.
@@ -44,14 +46,15 @@ class ComplianceAnalyzer:
             content: Markdown content from the dealership website
             state_rules: State-specific compliance rules
             url: Original URL (for reference)
+            url_type: Type of URL (VDP, INVENTORY, HOMEPAGE, etc.)
 
         Returns:
             Dictionary containing compliance analysis results
         """
-        logger.info(f"Analyzing compliance for {state_rules.state}")
+        logger.info(f"Analyzing compliance for {state_rules.state} ({url_type} page)")
 
         # Build the analysis prompt
-        prompt = self._build_analysis_prompt(content, state_rules, url)
+        prompt = self._build_analysis_prompt(content, state_rules, url, url_type)
 
         # Save the full prompt with rules for review
         from datetime import datetime
@@ -68,6 +71,7 @@ class ComplianceAnalyzer:
             f.write(f"# Complete Prompt Sent to GPT-4.1-nano\n\n")
             f.write(f"**URL:** {url}\n")
             f.write(f"**State:** {state_rules.state}\n")
+            f.write(f"**URL Type:** {get_url_type_name(url_type)}\n")
             f.write(f"**Timestamp:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"**Model:** {OPENAI_MODEL}\n")
             f.write(f"**Character Count:** {len(prompt)}\n\n")
@@ -123,7 +127,7 @@ class ComplianceAnalyzer:
             logger.error(f"Error during LLM analysis: {str(e)}")
             raise
 
-    def _build_analysis_prompt(self, content: str, state_rules: StateRules, url: str) -> str:
+    def _build_analysis_prompt(self, content: str, state_rules: StateRules, url: str, url_type: str = "VDP") -> str:
         """
         Build the analysis prompt for the LLM.
 
@@ -131,15 +135,22 @@ class ComplianceAnalyzer:
             content: Markdown content
             state_rules: State compliance rules
             url: Website URL
+            url_type: Type of URL (VDP, INVENTORY, HOMEPAGE, etc.)
 
         Returns:
             Formatted prompt string
         """
+        # Get URL type-specific preamble
+        url_type_context = get_preamble(url_type)
+
         prompt = f"""Analyze the following auto dealership website content for compliance with {state_rules.state} regulations.
 
 URL: {url}
+Page Type: {get_url_type_name(url_type)}
 
-# Analysis Guidelines
+{url_type_context}
+
+# General Analysis Guidelines
 
 When evaluating compliance, apply these principles:
 

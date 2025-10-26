@@ -1,7 +1,7 @@
 """URL management API routes."""
 
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import List, Optional, Dict
 import sys
 from pathlib import Path
 
@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from core.database import ComplianceDatabase
 from core.config import DATABASE_PATH
 from schemas.url import URLCreate, URLResponse, URLUpdate
+from services.scan_service import ScanService
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -20,7 +22,10 @@ def get_db():
 
 
 @router.post("/", response_model=URLResponse, status_code=201)
-async def add_url(url_data: URLCreate):
+async def add_url(
+    url_data: URLCreate,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Add a new URL to monitor.
 
@@ -52,7 +57,8 @@ async def add_url(url_data: URLCreate):
 @router.get("/", response_model=List[URLResponse])
 async def list_urls(
     project_id: Optional[int] = Query(None, description="Filter by project ID"),
-    active_only: bool = Query(True, description="Only return active URLs")
+    active_only: bool = Query(True, description="Only return active URLs"),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     List URLs.
@@ -68,7 +74,10 @@ async def list_urls(
 
 
 @router.get("/{url_id}", response_model=URLResponse)
-async def get_url(url_id: int):
+async def get_url(
+    url_id: int,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Get a specific URL by ID.
     """
@@ -83,7 +92,11 @@ async def get_url(url_id: int):
 
 
 @router.patch("/{url_id}", response_model=URLResponse)
-async def update_url(url_id: int, url_update: URLUpdate):
+async def update_url(
+    url_id: int,
+    url_update: URLUpdate,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Update a URL's settings.
 
@@ -131,7 +144,10 @@ async def update_url(url_id: int, url_update: URLUpdate):
 
 
 @router.delete("/{url_id}", status_code=204)
-async def delete_url(url_id: int):
+async def delete_url(
+    url_id: int,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Delete a URL.
 
@@ -151,5 +167,76 @@ async def delete_url(url_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        db.close()
+
+
+@router.post("/{url_id}/rescan")
+async def force_rescan_url(
+    url_id: int,
+    skip_visual: bool = Query(False, description="Skip visual verification"),
+    current_user: Dict = Depends(get_current_user)
+):
+    """
+    Force an immediate rescan of a URL.
+
+    **Scan Processing Logic:**
+    - **Inventory URLs**: Scheduled for batch processing via OpenAI Batch API (cost-effective)
+    - **Other URLs** (VDP, homepage, etc.): Immediate synchronous scan
+
+    **Immediate Scans:**
+    - Runs synchronously (may take 30-60 seconds)
+    - Uses real-time OpenAI API calls
+    - Returns complete results immediately
+
+    **Batch Scans:**
+    - Returns immediately with batch ID
+    - Processes asynchronously via OpenAI Batch API
+    - Results available within 24 hours
+    """
+    db = get_db()
+    try:
+        url = db.get_url(url_id=url_id)
+        if not url:
+            raise HTTPException(status_code=404, detail="URL not found")
+
+        # Force rescan works regardless of active status
+        # Active status only controls automatic scheduled scans
+        url_type = url.get('url_type', '').lower()
+
+        # Determine scan type based on URL type
+        if url_type == 'inventory':
+            # Schedule batch scan for inventory
+            scan_service = ScanService(db)
+            result = await scan_service.schedule_batch_scan(
+                url_ids=[url_id],
+                batch_name=f"Force rescan: {url['url']}"
+            )
+            return {
+                "scan_type": "batch",
+                "status": "scheduled",
+                "message": "Inventory scan scheduled for batch processing",
+                **result
+            }
+        else:
+            # Run immediate scan for non-inventory URLs
+            scan_service = ScanService(db)
+            result = await scan_service.force_rescan_immediate(
+                url_id=url_id,
+                skip_visual=skip_visual
+            )
+            return {
+                "scan_type": "immediate",
+                "status": "completed",
+                "message": "Scan completed successfully",
+                **result
+            }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rescan failed: {str(e)}")
     finally:
         db.close()

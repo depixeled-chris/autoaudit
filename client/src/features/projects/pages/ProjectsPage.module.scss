@@ -42,6 +42,9 @@
   font-size: $font-size-sm;
 
   a {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
     color: $color-primary;
     text-decoration: none;
 

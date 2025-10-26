@@ -60,9 +60,12 @@ class ProjectSummary(BaseModel):
     project_name: str = Field(..., description="Project name")
     total_urls: int = Field(..., description="Total active URLs")
     total_checks: int = Field(..., description="Total compliance checks performed")
-    avg_score: float = Field(..., description="Average compliance score")
+    avg_score: float = Field(..., description="Average compliance score (based on most recent check per URL)")
     compliant_count: int = Field(..., description="Number of compliant checks")
     total_violations: int = Field(..., description="Total violations found")
+    total_text_tokens: int = Field(..., description="Total tokens used for text analysis")
+    total_visual_tokens: int = Field(..., description="Total tokens used for visual verification")
+    total_tokens: int = Field(..., description="Total tokens used across all checks")
 
     model_config = {
         "json_schema_extra": {
@@ -75,6 +78,48 @@ class ProjectSummary(BaseModel):
                     "avg_score": 82.5,
                     "compliant_count": 120,
                     "total_violations": 45
+                }
+            ]
+        }
+    }
+
+
+class IntelligentSetupRequest(BaseModel):
+    """Request model for intelligent project setup."""
+    url: str = Field(..., min_length=1, max_length=500, description="Starting URL (homepage or any dealership page)")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "url": "https://www.allstarcdjrmuskogee.com"
+                }
+            ]
+        }
+    }
+
+
+class IntelligentSetupResponse(BaseModel):
+    """Response model for intelligent project setup."""
+    project: ProjectResponse = Field(..., description="Created project")
+    urls_created: int = Field(..., description="Number of URLs created")
+    analysis_summary: str = Field(..., description="Summary of the analysis performed")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "project": {
+                        "id": 1,
+                        "name": "AllStar CDJR Muskogee",
+                        "state_code": "OK",
+                        "description": "Auto-detected dealership (dealer.com platform)",
+                        "base_url": "https://www.allstarcdjrmuskogee.com",
+                        "created_at": "2025-10-24T18:30:00",
+                        "updated_at": "2025-10-24T18:30:00"
+                    },
+                    "urls_created": 3,
+                    "analysis_summary": "Detected AllStar CDJR Muskogee dealership in Oklahoma. Created monitoring for homepage, inventory page, and sample VDP."
                 }
             ]
         }

@@ -128,7 +128,30 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 # Environment Configuration
 import os
 
+# Deployment environment
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")  # development | production
+IS_PRODUCTION = ENVIRONMENT == "production"
+
+# Database
 DATABASE_PATH = os.getenv("DATABASE_PATH", "compliance.db")
+
+# JWT Configuration
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
 JWT_ALGORITHM = "HS256"
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours (old config, now overridden in auth.py)
+
+# Cookie Security Settings
+COOKIE_SECURE = IS_PRODUCTION  # Only send cookies over HTTPS in production
+COOKIE_SAMESITE = "strict" if IS_PRODUCTION else "lax"  # Strict in production, lax for development
+
+# CORS Origins
+if IS_PRODUCTION:
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",")
+else:
+    # Development origins
+    CORS_ORIGINS = [
+        "http://localhost",
+        "http://localhost:5173",
+        "http://127.0.0.1",
+        "http://127.0.0.1:5173",
+    ]

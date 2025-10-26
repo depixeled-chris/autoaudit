@@ -47,7 +47,7 @@ class HybridComplianceChecker:
 
         logger.info(f"HybridComplianceChecker initialized for {self.state_rules.state}")
 
-    async def check_url(self, url: str, save_formats: list = ["markdown"], skip_visual: bool = False) -> dict:
+    async def check_url(self, url: str, save_formats: list = ["markdown"], skip_visual: bool = False, url_type: str = "VDP") -> dict:
         """
         Check a single URL with hybrid text + visual verification.
 
@@ -55,11 +55,12 @@ class HybridComplianceChecker:
             url: Dealership website URL
             save_formats: List of report formats to save
             skip_visual: If True, skip visual verification (for testing)
+            url_type: Type of URL (VDP, INVENTORY, HOMEPAGE, etc.)
 
         Returns:
             Analysis results dictionary
         """
-        logger.info(f"Starting hybrid compliance check for: {url}")
+        logger.info(f"Starting hybrid compliance check for: {url} (Type: {url_type})")
 
         try:
             # Step 1 & 2: Scrape and extract with templates
@@ -88,10 +89,11 @@ class HybridComplianceChecker:
                 page = await scraper.browser.new_page()
                 await page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
-                # Get extraction template
+                # Get extraction template based on URL type
                 extraction_template = self.extraction_manager.get_template(
                     url=url,
-                    platform=scraped_data['platform']
+                    platform=scraped_data['platform'],
+                    url_type=url_type
                 )
 
                 # Extract structured content
@@ -147,14 +149,17 @@ class HybridComplianceChecker:
             text_result = await self.analyzer.analyze_compliance(
                 content=llm_input,
                 state_rules=self.state_rules,
-                url=url
+                url=url,
+                url_type=url_type
             )
 
             logger.info(f"✓ Text analysis complete. Score: {text_result.get('overall_compliance_score', 0)}/100")
 
             # Step 4: Visual Verification (if needed)
+            # ALWAYS do visual verification for homepage scans
+            force_visual_for_homepage = url_type.upper() == 'HOMEPAGE'
             visual_results = []
-            if not skip_visual:
+            if not skip_visual or force_visual_for_homepage:
                 logger.info("Step 4/5: Checking for visual verification needs...")
 
                 # Find violations that need visual verification
@@ -163,6 +168,17 @@ class HybridComplianceChecker:
                     v for v in text_result.get('violations', [])
                     if v.get('needs_visual_verification', False) and v.get('confidence', 1.0) < 0.85
                 ]
+
+                # For homepages, ALWAYS do visual verification of key contact info
+                # even if no violations are flagged
+                if force_visual_for_homepage and not needs_visual:
+                    logger.info("Homepage detected - forcing visual verification of contact information")
+                    # Create synthetic verification task for contact info visibility
+                    needs_visual.append({
+                        'rule_key': 'homepage_contact_visibility',
+                        'rule_violated': 'Physical address, phone number, and business hours must be conspicuous and easily accessible',
+                        'needs_visual_verification': True
+                    })
 
                 if needs_visual:
                     logger.info(f"Found {len(needs_visual)} violation(s) needing visual verification")
@@ -230,6 +246,17 @@ class HybridComplianceChecker:
             # Merge visual results into text results
             text_result['visual_verifications'] = visual_results
             text_result['template_id'] = template_id
+
+            # Calculate token usage
+            text_tokens = text_result.get('tokens_used', 0)
+            visual_tokens = sum(v.get('tokens_used', 0) for v in visual_results)
+            total_tokens = text_tokens + visual_tokens
+
+            text_result['text_analysis_tokens'] = text_tokens
+            text_result['visual_tokens'] = visual_tokens
+            text_result['total_tokens'] = total_tokens
+
+            logger.info(f"✓ Token usage - Text: {text_tokens}, Visual: {visual_tokens}, Total: {total_tokens}")
 
             # Step 5: Generate reports
             logger.info("Step 5/5: Generating reports...")

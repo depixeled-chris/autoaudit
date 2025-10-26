@@ -1,0 +1,98 @@
+@use '../../../styles/variables.scss' as *;
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-md;
+  box-shadow: $shadow-lg;
+  min-width: 300px;
+  max-width: 500px;
+  background-color: $color-background;
+  border: 1px solid $color-border;
+  animation: slideIn 0.3s ease-out;
+
+  &.success {
+    border-color: $color-success;
+    background-color: rgba($color-success, 0.1);
+
+    .icon {
+      color: $color-success;
+    }
+  }
+
+  &.error {
+    border-color: $color-error;
+    background-color: rgba($color-error, 0.1);
+
+    .icon {
+      color: $color-error;
+    }
+  }
+
+  &.warning {
+    border-color: $color-warning;
+    background-color: rgba($color-warning, 0.1);
+
+    .icon {
+      color: $color-warning;
+    }
+  }
+
+  &.info {
+    border-color: $color-primary;
+    background-color: rgba($color-primary, 0.1);
+
+    .icon {
+      color: $color-primary;
+    }
+  }
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex: 1;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.message {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: 1.4;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $color-text-secondary;
+  padding: $spacing-xs;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  transition: all $transition-fast;
+
+  &:hover {
+    background-color: rgba($color-text-primary, 0.1);
+    color: $color-text-primary;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

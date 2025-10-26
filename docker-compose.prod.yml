@@ -8,9 +8,11 @@ services:
     expose:
       - "8000"
     environment:
+      - ENVIRONMENT=production
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DATABASE_PATH=/app/data/compliance.db
+      - CORS_ORIGINS=${CORS_ORIGINS}
     volumes:
       # Persist database
       - ./server/data:/app/data

@@ -1,0 +1,50 @@
+@use '@styles/variables.scss' as *;
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-lg;
+  padding: $spacing-xl 0;
+}
+
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+
+  &.warning {
+    background-color: rgba($color-warning-value, 0.1);
+    color: $color-warning;
+  }
+
+  &.danger {
+    background-color: rgba($color-error-value, 0.1);
+    color: $color-error;
+  }
+
+  &.info {
+    background-color: rgba($color-primary-value, 0.1);
+    color: $color-primary;
+  }
+}
+
+.message {
+  margin: 0;
+  text-align: center;
+  color: $color-text-primary;
+  font-size: $font-size-base;
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}

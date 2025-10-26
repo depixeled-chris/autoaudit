@@ -3,6 +3,10 @@
 from typing import List, Optional, Dict
 import sys
 from pathlib import Path
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -105,7 +109,7 @@ class ProjectService(BaseService):
 
     def delete_project(self, project_id: int) -> bool:
         """
-        Delete a project.
+        Soft delete a project and deactivate all associated URLs.
 
         Args:
             project_id: Project ID
@@ -116,9 +120,13 @@ class ProjectService(BaseService):
         Raises:
             ValueError: If project cannot be deleted
         """
-        if not self.can_delete_project(project_id):
-            raise ValueError("Cannot delete project with active URLs")
+        # Deactivate all URLs for this project first
+        urls = self.db.list_urls(project_id=project_id, active_only=False)
+        for url in urls:
+            try:
+                self.db.update_url(url['id'], active=False)
+            except Exception as e:
+                logger.warning(f"Failed to deactivate URL {url['id']}: {str(e)}")
 
-        # Note: Actual deletion not implemented to preserve data integrity
-        # In production, implement soft delete or cascading
-        raise NotImplementedError("Project deletion not implemented. Data preserved for audit trail.")
+        # Perform soft delete
+        return self.db.delete_project(project_id)

@@ -1,19 +1,25 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '@store/hooks';
 import { useGetProjectsQuery, useCaptureProjectScreenshotMutation } from '../projectsApi';
 import { Card, CardHeader, CardTitle, CardContent } from '@components/ui/Card';
 import { Button } from '@components/ui/Button';
-import { Plus, Folder, Camera } from 'lucide-react';
+import { Plus, Folder, Camera, ExternalLink } from 'lucide-react';
 import { CreateProjectModal } from '../components/CreateProjectModal';
 import styles from './ProjectsPage.module.scss';
 
 export function ProjectsPage() {
+  const navigate = useNavigate();
   const { isAuthenticated } = useAppSelector((state) => state.auth);
   const { data: projectsList, isLoading, error } = useGetProjectsQuery(undefined, {
     skip: !isAuthenticated, // Only fetch if authenticated
   });
   const [captureScreenshot, { isLoading: isCapturing }] = useCaptureProjectScreenshotMutation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleProjectClick = (projectId: number) => {
+    navigate(`/projects/${projectId}`);
+  };
 
   const handleCaptureScreenshot = async (projectId: number, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent card click
@@ -77,7 +83,11 @@ export function ProjectsPage() {
           {projectsList.map((project) => (
             <Card key={project.id} hover>
               {project.screenshot_path ? (
-                <div className={styles.screenshot}>
+                <div
+                  className={styles.screenshot}
+                  onClick={() => handleProjectClick(project.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <img
                     src={`${import.meta.env.VITE_API_URL}/${project.screenshot_path}`}
                     alt={`${project.name} screenshot`}
@@ -85,18 +95,33 @@ export function ProjectsPage() {
                   />
                 </div>
               ) : (
-                <div className={styles.screenshotPlaceholder}>
+                <div
+                  className={styles.screenshotPlaceholder}
+                  onClick={() => handleProjectClick(project.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <Folder size={48} />
                 </div>
               )}
               <CardHeader>
-                <CardTitle>{project.name}</CardTitle>
+                <CardTitle
+                  onClick={() => handleProjectClick(project.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {project.name}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className={styles.projectInfo}>
                   {project.base_url && (
                     <p className={styles.baseUrl}>
-                      <a href={project.base_url} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={project.base_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink size={14} />
                         {project.base_url}
                       </a>
                     </p>

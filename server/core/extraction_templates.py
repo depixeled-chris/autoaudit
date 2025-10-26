@@ -110,14 +110,51 @@ class ExtractionTemplateManager:
         Args:
             db_path: Path to SQLite database
         """
-        from database import ComplianceDatabase
+        from core.database import ComplianceDatabase
         self.db = ComplianceDatabase(db_path)
         self._load_default_templates()
         logger.info(f"ExtractionTemplateManager initialized with database: {db_path}")
 
     def _load_default_templates(self):
-        """Load default templates for common platforms."""
-        # Dealer.com template
+        """Load default templates for common platforms and URL types."""
+
+        # VDP (Vehicle Detail Page) - Aggressive cleanup, focus on vehicle only
+        vdp_template = {
+            "template_id": "vdp_default",
+            "platform": "vdp",
+            "selectors": {
+                "vehicle_heading": ".vehicle-title h1, .vdp-title h1, h1.vehicle-name, h1",
+                "price_primary": ".pricing-module .price, .internet-price, .final-price, [class*='price']",
+                "price_section": ".pricing-module, .price-section, .vehicle-pricing",
+                "dealer_name": ".dealer-info .name, .dealership-name",
+                "stock_number": ".stock-number, .vin-stock .stock",
+                "vin": ".vin-number, .vehicle-vin",
+                "disclaimers": ".legal-disclaimers, .pricing-disclaimers, .disclaimer-text",
+                "description": ".vehicle-description, .vehicle-overview",
+                "features": ".vehicle-features, .equipment-list, .features-list"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    "nav", "header.site-header", "footer.site-footer",
+                    ".navigation", ".main-menu", ".sidebar", ".recommended-vehicles",
+                    "script", "style", ".ads", ".advertisement", ".chat-widget"
+                ],
+                "keep_only_main_content": True,
+                "remove_duplicate_text": True
+            },
+            "extraction_order": [
+                "vehicle_heading",
+                "stock_number",
+                "vin",
+                "price_section",
+                "description",
+                "features",
+                "disclaimers"
+            ]
+        }
+        self._save_template(vdp_template)
+
+        # Dealer.com VDP (specific platform)
         dealer_com = {
             "template_id": "dealer.com_vdp",
             "platform": "dealer.com",
@@ -153,6 +190,157 @@ class ExtractionTemplateManager:
         }
         self._save_template(dealer_com)
 
+        # HOMEPAGE - Minimal cleanup, preserve ALL contact info
+        homepage = {
+            "template_id": "homepage_default",
+            "platform": "homepage",
+            "selectors": {
+                "dealership_name": "h1, .dealership-name, .dealer-name, .brand-name",
+                "header_contact": "header [class*='phone'], header [class*='contact'], .header-phone",
+                "main_content": "main, .main-content, #main, .content",
+                "footer_content": "footer, .footer, .site-footer, #footer",
+                "contact_section": ".contact, .contact-us, .location, .hours",
+                "promotional_banners": ".banner, .promo, .special, .hero",
+                "featured_vehicles": ".featured, .inventory-preview, .vehicle-showcase"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    "script", "style", ".ads", ".advertisement",
+                    "iframe[src*='chat']", ".chat-widget"
+                ],
+                "keep_only_main_content": False,  # CRITICAL: Keep full page including footer
+                "remove_duplicate_text": False  # Don't remove duplicates - footer might repeat header info
+            },
+            "extraction_order": [
+                "dealership_name",
+                "header_contact",
+                "main_content",
+                "promotional_banners",
+                "featured_vehicles",
+                "contact_section",
+                "footer_content"
+            ]
+        }
+        self._save_template(homepage)
+
+        # INVENTORY - Moderate cleanup, keep structure for filtering/sorting
+        inventory = {
+            "template_id": "inventory_default",
+            "platform": "inventory",
+            "selectors": {
+                "page_heading": "h1, .page-title, .inventory-title",
+                "filter_section": ".filters, .search-filters, .inventory-filters",
+                "vehicle_cards": ".vehicle-card, .inventory-item, .vehicle-listing",
+                "general_disclaimers": ".inventory-disclaimer, .general-disclaimer, footer .disclaimer",
+                "pagination": ".pagination, .page-nav",
+                "sort_controls": ".sort, .sorting, [class*='sort']"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    ".site-header nav", ".main-navigation", ".mega-menu",
+                    "script", "style", ".ads", ".advertisement", ".chat-widget",
+                    ".recommended-vehicles", ".recent-searches"
+                ],
+                "keep_only_main_content": False,  # Keep some structure
+                "remove_duplicate_text": True
+            },
+            "extraction_order": [
+                "page_heading",
+                "filter_section",
+                "sort_controls",
+                "vehicle_cards",
+                "pagination",
+                "general_disclaimers"
+            ]
+        }
+        self._save_template(inventory)
+
+        # SPECIALS - Light cleanup, preserve terms/conditions
+        specials = {
+            "template_id": "specials_default",
+            "platform": "specials",
+            "selectors": {
+                "page_heading": "h1, .page-title, .specials-title",
+                "promotional_offers": ".special, .promo, .offer, .deal",
+                "terms_conditions": ".terms, .conditions, .disclaimer, .fine-print",
+                "expiration_dates": "[class*='expir'], [class*='valid-through']",
+                "footer_disclaimers": "footer .disclaimer, footer .terms"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    "script", "style", ".ads", ".advertisement", ".chat-widget"
+                ],
+                "keep_only_main_content": False,  # Keep footer for disclaimers
+                "remove_duplicate_text": False  # Terms might be repeated
+            },
+            "extraction_order": [
+                "page_heading",
+                "promotional_offers",
+                "expiration_dates",
+                "terms_conditions",
+                "footer_disclaimers"
+            ]
+        }
+        self._save_template(specials)
+
+        # SERVICE - Light cleanup, preserve hours/location
+        service = {
+            "template_id": "service_default",
+            "platform": "service",
+            "selectors": {
+                "service_heading": "h1, .service-title, .page-title",
+                "service_hours": ".hours, .service-hours, [class*='hour']",
+                "location_info": ".location, .address, .contact",
+                "service_offerings": ".services, .service-list, .offerings",
+                "pricing_specials": ".service-special, .coupon, .service-price",
+                "footer_contact": "footer .contact, footer .hours"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    "script", "style", ".ads", ".advertisement", ".chat-widget"
+                ],
+                "keep_only_main_content": False,  # Keep footer for hours/contact
+                "remove_duplicate_text": False
+            },
+            "extraction_order": [
+                "service_heading",
+                "service_hours",
+                "location_info",
+                "service_offerings",
+                "pricing_specials",
+                "footer_contact"
+            ]
+        }
+        self._save_template(service)
+
+        # FINANCING - Light cleanup, preserve legal disclaimers
+        financing = {
+            "template_id": "financing_default",
+            "platform": "financing",
+            "selectors": {
+                "financing_heading": "h1, .financing-title, .page-title",
+                "rate_information": ".rates, .apr, .financing-rates",
+                "calculator": ".calculator, .payment-calculator",
+                "disclaimers": ".disclaimer, .disclosure, .legal",
+                "footer_legal": "footer .disclaimer, footer .legal, footer .disclosure"
+            },
+            "cleanup_rules": {
+                "remove_selectors": [
+                    "script", "style", ".ads", ".advertisement", ".chat-widget"
+                ],
+                "keep_only_main_content": False,  # Keep footer for legal text
+                "remove_duplicate_text": False  # Legal text might be repeated
+            },
+            "extraction_order": [
+                "financing_heading",
+                "rate_information",
+                "calculator",
+                "disclaimers",
+                "footer_legal"
+            ]
+        }
+        self._save_template(financing)
+
         # Generic fallback template
         generic = {
             "template_id": "generic_fallback",
@@ -163,7 +351,7 @@ class ExtractionTemplateManager:
                 "description": ".description, .details, main"
             },
             "cleanup_rules": {
-                "remove_selectors": ["nav", "header", "footer", "script", "style"],
+                "remove_selectors": ["script", "style"],  # Don't remove structural elements
                 "keep_only_main_content": False
             },
             "extraction_order": ["vehicle_heading", "price_primary", "description"]
@@ -191,7 +379,8 @@ class ExtractionTemplateManager:
         self,
         url: str,
         platform: str = None,
-        template_override: str = None
+        template_override: str = None,
+        url_type: str = "VDP"
     ) -> ExtractionTemplate:
         """
         Get extraction template using override hierarchy.
@@ -199,13 +388,15 @@ class ExtractionTemplateManager:
         Priority:
         1. template_override (explicit)
         2. URL-specific template
-        3. Platform template
-        4. Generic fallback
+        3. URL type template (VDP, HOMEPAGE, INVENTORY, etc.)
+        4. Platform template
+        5. Generic fallback
 
         Args:
             url: Page URL
             platform: Detected platform
             template_override: Explicit template ID
+            url_type: Type of URL (VDP, HOMEPAGE, INVENTORY, SPECIALS, SERVICE, FINANCING)
 
         Returns:
             ExtractionTemplate instance
@@ -225,7 +416,16 @@ class ExtractionTemplateManager:
             logger.info(f"Using URL-specific template: {url_template_id}")
             return ExtractionTemplate(config)
 
-        # 3. Platform template
+        # 3. URL type template (NEW - primary selection method)
+        if url_type:
+            url_type_lower = url_type.lower()
+            type_template_id = f"{url_type_lower}_default"
+            config = self._load_template(type_template_id)
+            if config:
+                logger.info(f"Using URL type template: {type_template_id} (type={url_type})")
+                return ExtractionTemplate(config)
+
+        # 4. Platform template
         if platform and platform != "unknown":
             platform_template_id = f"{platform.lower().replace(' ', '_')}_vdp"
             config = self._load_template(platform_template_id)
@@ -233,7 +433,7 @@ class ExtractionTemplateManager:
                 logger.info(f"Using platform template: {platform_template_id}")
                 return ExtractionTemplate(config)
 
-        # 4. Generic fallback
+        # 5. Generic fallback
         logger.info("Using generic fallback template")
         config = self._load_template("generic_fallback")
         return ExtractionTemplate(config)

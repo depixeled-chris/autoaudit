@@ -1,0 +1,416 @@
+"""Intelligent project setup service using LLM to analyze dealership websites."""
+
+import sys
+from pathlib import Path
+from typing import Dict, Optional, List
+import logging
+import re
+import json
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.scraper import DealershipScraper
+from core.converter import ContentConverter
+from core.analyzer import ComplianceAnalyzer
+from core.database import ComplianceDatabase
+from schemas.project import ProjectCreate, ProjectResponse, IntelligentSetupResponse
+from schemas.url import URLCreate
+from services.project_service import ProjectService
+from services.screenshot_service import ScreenshotService
+from services.base_service import BaseService
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class IntelligentSetupService(BaseService):
+    """Service for intelligent project setup from a single URL."""
+
+    def __init__(self, db):
+        """Initialize service with database and analyzer."""
+        super().__init__(db)
+        self.analyzer = None  # Lazy initialization
+
+    async def setup_from_url(self, starting_url: str) -> IntelligentSetupResponse:
+        """
+        Analyze a dealership website and create a project with monitoring URLs.
+
+        Args:
+            starting_url: Any URL from the dealership website
+
+        Returns:
+            IntelligentSetupResponse with created project and URLs
+
+        Raises:
+            ValueError: If analysis or setup fails
+        """
+        logger.info(f"Starting intelligent setup for: {starting_url}")
+
+        try:
+            # Step 1: Scrape the starting page
+            async with DealershipScraper() as scraper:
+                page_data = await scraper.scrape_page(starting_url)
+
+            # Step 2: Extract base information from page
+            platform = page_data['platform']
+            base_url = self._extract_base_url(starting_url)
+
+            # Step 3: Convert to markdown for LLM analysis
+            converter = ContentConverter()
+            markdown = converter.html_to_markdown(page_data['html'])
+
+            # Step 4: Use LLM to analyze the page and extract dealership info
+            analysis_result = await self._analyze_dealership(
+                markdown=markdown,
+                url=starting_url,
+                platform=platform
+            )
+
+            # Step 5: Create the project
+            project_service = ProjectService(self.db)
+
+            # Handle duplicate names by appending a number
+            project_name = analysis_result['dealership_name']
+            name_suffix = 1
+            while True:
+                try:
+                    project_data = ProjectCreate(
+                        name=project_name,
+                        state_code=analysis_result['state_code'],
+                        description=f"Auto-detected dealership ({platform} platform)" if platform != 'unknown' else "Auto-detected dealership",
+                        base_url=base_url
+                    )
+                    project = project_service.create_project(project_data)
+                    break
+                except ValueError as e:
+                    if "UNIQUE constraint failed" in str(e) or "already exists" in str(e).lower():
+                        project_name = f"{analysis_result['dealership_name']} ({name_suffix})"
+                        name_suffix += 1
+                        if name_suffix > 10:  # Prevent infinite loop
+                            raise ValueError(f"Too many projects with similar names: {analysis_result['dealership_name']}")
+                    else:
+                        raise
+
+            # Step 6: Create URLs with appropriate frequencies
+            urls_created = await self._create_monitoring_urls(
+                project_id=project.id,
+                base_url=base_url,
+                homepage_url=analysis_result.get('homepage_url', base_url),
+                inventory_url=analysis_result.get('inventory_url'),
+                sample_vdp_url=analysis_result.get('sample_vdp_url'),
+                platform=platform
+            )
+
+            # Step 7: Capture screenshot
+            try:
+                screenshot_service = ScreenshotService(self.db)
+                await screenshot_service.capture_project_screenshot(
+                    project_id=project.id,
+                    url=base_url
+                )
+                logger.info(f"Captured screenshot for project {project.id}")
+                # Refresh project to get updated screenshot_path
+                refreshed_project = project_service.get_project(project.id)
+                if refreshed_project:
+                    project = refreshed_project
+            except Exception as e:
+                logger.warning(f"Failed to capture screenshot: {str(e)}")
+                # Continue even if screenshot fails
+
+            # Step 8: Build summary
+            summary = self._build_summary(
+                dealership_name=analysis_result['dealership_name'],
+                state_code=analysis_result['state_code'],
+                platform=platform,
+                urls_created=urls_created
+            )
+
+            logger.info(f"Intelligent setup complete: {summary}")
+
+            return IntelligentSetupResponse(
+                project=project,
+                urls_created=len(urls_created),
+                analysis_summary=summary
+            )
+
+        except Exception as e:
+            logger.error(f"Intelligent setup failed: {str(e)}")
+            raise ValueError(f"Failed to set up project: {str(e)}")
+
+    async def _analyze_dealership(
+        self,
+        markdown: str,
+        url: str,
+        platform: str
+    ) -> Dict:
+        """
+        Use LLM to analyze the dealership page and extract key information.
+
+        Args:
+            markdown: Markdown content of the page
+            url: Original URL
+            platform: Detected platform
+
+        Returns:
+            Dictionary with dealership_name, state_code, homepage_url, inventory_url, etc.
+        """
+        # Lazy initialize analyzer
+        if self.analyzer is None:
+            try:
+                self.analyzer = ComplianceAnalyzer()
+            except Exception as e:
+                logger.error(f"Failed to initialize ComplianceAnalyzer: {str(e)}")
+                raise
+
+        prompt = f"""Analyze this dealership website to extract key information.
+
+URL: {url}
+Detected Platform: {platform}
+
+# Page Content
+
+{markdown[:10000]}  # Limit content to avoid token limits
+
+# Task
+
+Extract the following information from this dealership website:
+
+1. **Dealership Name**: The official name of the dealership
+2. **State Code**: Two-letter US state code (e.g., OK, CA, TX, NY)
+3. **Homepage URL**: The main homepage URL (if different from provided URL)
+4. **Inventory Page URL**: URL to the inventory/search/browse vehicles page (look for links like "Inventory", "Search Inventory", "Browse Vehicles", etc.)
+
+Respond in JSON format:
+
+{{
+    "dealership_name": "<name>",
+    "state_code": "<XX>",
+    "homepage_url": "<url or null>",
+    "inventory_url": "<url or null>",
+    "confidence": {{
+        "dealership_name": <0.0-1.0>,
+        "state_code": <0.0-1.0>,
+        "inventory_url": <0.0-1.0>
+    }},
+    "reasoning": "<brief explanation of how you determined these values>"
+}}
+
+**Important**:
+- If you cannot determine a value with confidence, set it to null
+- State code must be a valid 2-letter US state code
+- URLs should be complete (starting with http:// or https://)
+- Set confidence scores based on how certain you are
+"""
+
+        try:
+            # Use the existing analyzer client to make the API call
+            response = await self.analyzer.client.chat.completions.create(
+                model="gpt-4.1-nano",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert at analyzing dealership websites and extracting structured information."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                max_completion_tokens=1000,
+                response_format={"type": "json_object"}
+            )
+
+            result_text = response.choices[0].message.content
+            if not result_text:
+                raise ValueError("Empty response from LLM")
+
+            result = json.loads(result_text)
+            logger.info(f"LLM analysis result: {result}")
+
+            # Validate and fill in defaults
+            if not result.get('dealership_name'):
+                result['dealership_name'] = self._extract_name_from_url(url)
+
+            if not result.get('state_code') or len(result['state_code']) != 2:
+                result['state_code'] = 'CA'  # Default to CA if not detected
+
+            result['state_code'] = result['state_code'].upper()
+
+            return result
+
+        except Exception as e:
+            logger.error(f"LLM analysis failed: {str(e)}")
+            # Fallback to basic extraction
+            return {
+                "dealership_name": self._extract_name_from_url(url),
+                "state_code": "CA",  # Default
+                "homepage_url": None,
+                "inventory_url": None,
+                "confidence": {
+                    "dealership_name": 0.3,
+                    "state_code": 0.1,
+                    "inventory_url": 0.0
+                },
+                "reasoning": f"LLM analysis failed, using fallback extraction: {str(e)}"
+            }
+
+    async def _find_sample_vdp(self, inventory_url: str, platform: str) -> Optional[str]:
+        """
+        Scrape the inventory page to find a sample VDP URL.
+
+        Args:
+            inventory_url: URL of the inventory page
+            platform: Detected platform
+
+        Returns:
+            Sample VDP URL or None if not found
+        """
+        try:
+            async with DealershipScraper() as scraper:
+                inventory_data = await scraper.scrape_page(inventory_url)
+
+            # Extract all links from the page
+            html = inventory_data['html']
+
+            # Common VDP URL patterns by platform
+            vdp_patterns = {
+                'dealer.com': r'href="([^"]*/(new|used)/[^"]*\.htm[^"]*)"',
+                'DealerOn': r'href="([^"]*/(vehicle|inventory)/[^"]*)"',
+                'unknown': r'href="([^"]*/(?:new|used|vehicle|inventory)/[^"]*)"'
+            }
+
+            pattern = vdp_patterns.get(platform, vdp_patterns['unknown'])
+            matches = re.findall(pattern, html, re.IGNORECASE)
+
+            if matches:
+                # Get the first match (it's a tuple from the regex groups)
+                vdp_path = matches[0][0] if isinstance(matches[0], tuple) else matches[0]
+
+                # Make it absolute if it's relative
+                if vdp_path.startswith('http'):
+                    return vdp_path
+                elif vdp_path.startswith('/'):
+                    base_url = self._extract_base_url(inventory_url)
+                    return f"{base_url}{vdp_path}"
+                else:
+                    return None
+
+            logger.warning(f"No VDP URLs found on inventory page: {inventory_url}")
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to find sample VDP: {str(e)}")
+            return None
+
+    async def _create_monitoring_urls(
+        self,
+        project_id: int,
+        base_url: str,
+        homepage_url: Optional[str],
+        inventory_url: Optional[str],
+        sample_vdp_url: Optional[str],
+        platform: str
+    ) -> List[Dict]:
+        """
+        Create monitoring URLs with appropriate frequencies.
+
+        Args:
+            project_id: Project ID
+            base_url: Base URL of the dealership
+            homepage_url: Homepage URL (if different from base)
+            inventory_url: Inventory page URL
+            sample_vdp_url: Sample VDP URL
+            platform: Detected platform
+
+        Returns:
+            List of created URL records
+        """
+        created_urls = []
+
+        # Homepage: once per day (24 hours)
+        homepage = homepage_url or base_url
+        url_id = self.db.add_url(
+            url=homepage,
+            project_id=project_id,
+            url_type="homepage",
+            platform=platform if platform != 'unknown' else None,
+            check_frequency_hours=24
+        )
+        created_urls.append(self.db.get_url(url_id=url_id))
+        logger.info(f"Created homepage URL: {homepage}")
+
+        # Inventory: once every 7 days (168 hours)
+        if inventory_url:
+            url_id = self.db.add_url(
+                url=inventory_url,
+                project_id=project_id,
+                url_type="inventory",
+                platform=platform if platform != 'unknown' else None,
+                check_frequency_hours=168
+            )
+            created_urls.append(self.db.get_url(url_id=url_id))
+            logger.info(f"Created inventory URL: {inventory_url}")
+
+            # Try to find a sample VDP from the inventory page
+            if not sample_vdp_url:
+                sample_vdp_url = await self._find_sample_vdp(inventory_url, platform)
+
+        # Sample VDP: scrape once only (9999 hours = effectively once)
+        if sample_vdp_url:
+            url_id = self.db.add_url(
+                url=sample_vdp_url,
+                project_id=project_id,
+                url_type="vdp",
+                platform=platform if platform != 'unknown' else None,
+                check_frequency_hours=9999  # Effectively once-only
+            )
+            created_urls.append(self.db.get_url(url_id=url_id))
+            logger.info(f"Created sample VDP URL: {sample_vdp_url}")
+
+        return created_urls
+
+    def _extract_base_url(self, url: str) -> str:
+        """Extract base URL (scheme + domain) from a full URL."""
+        match = re.match(r'(https?://[^/]+)', url)
+        if match:
+            return match.group(1)
+        return url
+
+    def _extract_name_from_url(self, url: str) -> str:
+        """Extract a dealership name from URL as fallback."""
+        # Remove protocol and www
+        name = re.sub(r'https?://(www\.)?', '', url)
+        # Take the domain name before the first slash or dot after the main part
+        name = name.split('/')[0].split('.')[0]
+        # Convert to title case and replace hyphens/underscores
+        name = name.replace('-', ' ').replace('_', ' ').title()
+        return name
+
+    def _build_summary(
+        self,
+        dealership_name: str,
+        state_code: str,
+        platform: str,
+        urls_created: List[Dict]
+    ) -> str:
+        """Build a summary of the setup process."""
+        # Filter out None values and extract url_types
+        url_types = [url['url_type'] for url in urls_created if url is not None]
+
+        parts = [f"Detected {dealership_name} dealership in {state_code}."]
+
+        if platform != 'unknown':
+            parts.append(f"Platform: {platform}.")
+
+        url_desc = []
+        if 'homepage' in url_types:
+            url_desc.append('homepage')
+        if 'inventory' in url_types:
+            url_desc.append('inventory page')
+        if 'vdp' in url_types:
+            url_desc.append('sample VDP')
+
+        if url_desc:
+            parts.append(f"Created monitoring for {', '.join(url_desc)}.")
+
+        return ' '.join(parts)

@@ -1,7 +1,7 @@
 """Compliance check API routes."""
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
-from typing import List, Optional
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
+from typing import List, Optional, Dict
 import sys
 from pathlib import Path
 import asyncio
@@ -12,6 +12,7 @@ from core.database import ComplianceDatabase
 from core.config import DATABASE_PATH
 from core.main_hybrid import HybridComplianceChecker
 from schemas.check import CheckRequest, CheckResponse, ViolationResponse, VisualVerificationResponse
+from api.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -22,7 +23,10 @@ def get_db():
 
 
 @router.post("/", response_model=CheckResponse, status_code=201)
-async def run_compliance_check(check_request: CheckRequest):
+async def run_compliance_check(
+    check_request: CheckRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Run a compliance check on a URL.
 
@@ -113,7 +117,8 @@ async def run_compliance_check(check_request: CheckRequest):
 async def list_checks(
     url_id: Optional[int] = Query(None, description="Filter by URL ID"),
     state_code: Optional[str] = Query(None, description="Filter by state code"),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results")
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
+    current_user: Dict = Depends(get_current_user)
 ):
     """
     List compliance checks.
@@ -130,7 +135,11 @@ async def list_checks(
 
 
 @router.get("/{check_id}", response_model=CheckResponse)
-async def get_check(check_id: int, include_details: bool = Query(True, description="Include violations and visual verifications")):
+async def get_check(
+    check_id: int,
+    include_details: bool = Query(True, description="Include violations and visual verifications"),
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Get a specific compliance check by ID.
 
@@ -158,7 +167,10 @@ async def get_check(check_id: int, include_details: bool = Query(True, descripti
 
 
 @router.get("/{check_id}/violations", response_model=List[ViolationResponse])
-async def get_check_violations(check_id: int):
+async def get_check_violations(
+    check_id: int,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Get all violations for a specific check.
     """
@@ -175,7 +187,10 @@ async def get_check_violations(check_id: int):
 
 
 @router.get("/{check_id}/visual-verifications", response_model=List[VisualVerificationResponse])
-async def get_check_visual_verifications(check_id: int):
+async def get_check_visual_verifications(
+    check_id: int,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Get all visual verifications for a specific check.
     """
@@ -192,7 +207,10 @@ async def get_check_visual_verifications(check_id: int):
 
 
 @router.get("/url/{url}", response_model=CheckResponse)
-async def get_latest_check_for_url(url: str):
+async def get_latest_check_for_url(
+    url: str,
+    current_user: Dict = Depends(get_current_user)
+):
     """
     Get the most recent compliance check for a specific URL.
     """

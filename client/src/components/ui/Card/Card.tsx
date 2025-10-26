@@ -25,13 +25,13 @@ export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return <div className={`${styles.header} ${className}`}>{children}</div>;
 }
 
-export interface CardTitleProps {
+export interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
   children: ReactNode;
   className?: string;
 }
 
-export function CardTitle({ children, className = '' }: CardTitleProps) {
-  return <h3 className={`${styles.title} ${className}`}>{children}</h3>;
+export function CardTitle({ children, className = '', ...props }: CardTitleProps) {
+  return <h3 className={`${styles.title} ${className}`} {...props}>{children}</h3>;
 }
 
 export interface CardDescriptionProps {

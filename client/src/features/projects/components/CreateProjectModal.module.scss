@@ -1,23 +1,106 @@
 @use '../../../styles/variables.scss' as *;
 
+.modeSelector {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+  border-bottom: 1px solid $color-border;
+  padding-bottom: $spacing-sm;
+}
+
+.modeButton {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: $color-text-secondary;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  transition: all $transition-fast;
+
+  &:hover {
+    color: $color-text-primary;
+  }
+
+  &.active {
+    color: $color-primary;
+    border-bottom-color: $color-primary;
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;
   gap: $spacing-lg;
+  padding: $spacing-md 0;
+}
+
+.intelligentInfo {
+  padding: $spacing-md;
+  background-color: $color-surface;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+
+  p {
+    margin: 0 0 $spacing-sm 0;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    font-weight: 500;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: $spacing-lg;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+
+    li {
+      margin-bottom: $spacing-xs;
+    }
+  }
+}
+
+.setupStatus {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md;
+  background-color: rgba($color-primary-value, 0.1);
+  border-radius: $radius-md;
+  border: 1px solid $color-primary;
+  color: $color-primary;
+  font-size: $font-size-sm;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: $spacing-md;
-  margin-top: $spacing-md;
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
 }
 
 .submitError {
-  padding: $spacing-md;
-  background-color: rgba($color-error-value, 0.1);
-  border: 1px solid $color-error;
-  border-radius: $radius-md;
   color: $color-error;
   font-size: $font-size-sm;
+  padding: $spacing-sm;
+  background-color: rgba($color-error-value, 0.1);
+  border-radius: $radius-sm;
+  border: 1px solid $color-error;
 }

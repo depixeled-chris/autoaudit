@@ -26,8 +26,16 @@ class ComplianceDatabase:
         # This is safe with FastAPI's dependency injection since each request gets its own instance
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row  # Return rows as dictionaries
+
+        # Enable WAL mode for better concurrency and performance
+        self.conn.execute("PRAGMA journal_mode=WAL")
+        self.conn.execute("PRAGMA synchronous=NORMAL")  # Faster commits with WAL
+        self.conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
+        self.conn.execute("PRAGMA temp_store=MEMORY")  # Use memory for temp tables
+
         self._create_tables()
-        logger.info(f"Database initialized: {db_path}")
+        self._run_migrations()
+        logger.info(f"Database initialized: {db_path} (WAL mode)")
 
     def _create_tables(self):
         """Create database schema if it doesn't exist."""
@@ -43,6 +51,21 @@ class ComplianceDatabase:
                 is_active BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Refresh tokens table (for secure token rotation)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS refresh_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                device_info TEXT,
+                ip_address TEXT,
+                expires_at TIMESTAMP NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                revoked_at TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
 
@@ -66,6 +89,11 @@ class ComplianceDatabase:
         if 'screenshot_path' not in columns:
             cursor.execute("ALTER TABLE projects ADD COLUMN screenshot_path TEXT")
             logger.info("Added screenshot_path column to projects table")
+
+        # Migration: Add deleted_at for soft deletes
+        if 'deleted_at' not in columns:
+            cursor.execute("ALTER TABLE projects ADD COLUMN deleted_at TIMESTAMP")
+            logger.info("Added deleted_at column to projects table")
 
         # Templates table (for compliance caching)
         cursor.execute("""
@@ -186,17 +214,16 @@ class ComplianceDatabase:
             )
         """)
 
-        # Migrations - add columns if they don't exist
-        try:
-            cursor.execute("ALTER TABLE projects ADD COLUMN base_url TEXT")
-            self.conn.commit()
-            logger.info("Added base_url column to projects table")
-        except sqlite3.OperationalError:
-            # Column already exists
-            pass
-
         self.conn.commit()
         logger.info("Database schema created/verified")
+
+    def _run_migrations(self):
+        """Run any pending database migrations."""
+        try:
+            from core.migrations import run_migrations
+            run_migrations(self.db_path)
+        except Exception as e:
+            logger.warning(f"Migration system not available or failed: {str(e)}")
 
     # ==================== User Management ====================
 
@@ -242,6 +269,77 @@ class ComplianceDatabase:
             """, (password_hash, user_id))
         self.conn.commit()
 
+    # ==================== Refresh Token Management ====================
+
+    def save_refresh_token(
+        self,
+        user_id: int,
+        token_hash: str,
+        expires_at: datetime,
+        device_info: str = None,
+        ip_address: str = None
+    ) -> int:
+        """Save a refresh token to the database."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            INSERT INTO refresh_tokens (user_id, token_hash, device_info, ip_address, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, token_hash, device_info, ip_address, expires_at))
+        self.conn.commit()
+        logger.info(f"Created refresh token for user {user_id}")
+        return cursor.lastrowid
+
+    def get_refresh_token(self, token_hash: str) -> Optional[Dict]:
+        """Get refresh token by hash."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            SELECT * FROM refresh_tokens
+            WHERE token_hash = ? AND revoked_at IS NULL
+        """, (token_hash,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+    def revoke_refresh_token(self, token_hash: str) -> bool:
+        """Revoke a refresh token."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE refresh_tokens
+            SET revoked_at = CURRENT_TIMESTAMP
+            WHERE token_hash = ?
+        """, (token_hash,))
+        self.conn.commit()
+        success = cursor.rowcount > 0
+        if success:
+            logger.info(f"Revoked refresh token")
+        return success
+
+    def revoke_all_user_tokens(self, user_id: int) -> int:
+        """Revoke all refresh tokens for a user (logout all devices)."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE refresh_tokens
+            SET revoked_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND revoked_at IS NULL
+        """, (user_id,))
+        self.conn.commit()
+        count = cursor.rowcount
+        logger.info(f"Revoked {count} refresh tokens for user {user_id}")
+        return count
+
+    def cleanup_expired_tokens(self) -> int:
+        """Delete expired and revoked refresh tokens (cleanup job)."""
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            DELETE FROM refresh_tokens
+            WHERE expires_at < CURRENT_TIMESTAMP
+            OR revoked_at IS NOT NULL
+        """)
+        self.conn.commit()
+        count = cursor.rowcount
+        if count > 0:
+            logger.info(f"Cleaned up {count} expired/revoked tokens")
+        return count
+
     # ==================== Project Management ====================
 
     def create_project(self, name: str, state_code: str, description: str = None, base_url: str = None) -> int:
@@ -255,23 +353,26 @@ class ComplianceDatabase:
         logger.info(f"Created project: {name}")
         return cursor.lastrowid
 
-    def get_project(self, project_id: int = None, name: str = None) -> Optional[Dict]:
+    def get_project(self, project_id: int = None, name: str = None, include_deleted: bool = False) -> Optional[Dict]:
         """Get project by ID or name."""
         cursor = self.conn.cursor()
+        deleted_clause = "" if include_deleted else "AND deleted_at IS NULL"
+
         if project_id:
-            cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
+            cursor.execute(f"SELECT * FROM projects WHERE id = ? {deleted_clause}", (project_id,))
         elif name:
-            cursor.execute("SELECT * FROM projects WHERE name = ?", (name,))
+            cursor.execute(f"SELECT * FROM projects WHERE name = ? {deleted_clause}", (name,))
         else:
             return None
 
         row = cursor.fetchone()
         return dict(row) if row else None
 
-    def list_projects(self) -> List[Dict]:
+    def list_projects(self, include_deleted: bool = False) -> List[Dict]:
         """List all projects."""
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM projects ORDER BY created_at DESC")
+        deleted_clause = "" if include_deleted else "WHERE deleted_at IS NULL"
+        cursor.execute(f"SELECT * FROM projects {deleted_clause} ORDER BY created_at DESC")
         return [dict(row) for row in cursor.fetchall()]
 
     def update_project_screenshot(self, project_id: int, screenshot_path: str) -> bool:
@@ -285,6 +386,28 @@ class ComplianceDatabase:
         self.conn.commit()
         logger.info(f"Updated screenshot for project {project_id}: {screenshot_path}")
         return cursor.rowcount > 0
+
+    def delete_project(self, project_id: int) -> bool:
+        """
+        Soft delete a project by setting deleted_at timestamp.
+
+        Args:
+            project_id: Project ID to delete
+
+        Returns:
+            True if project was deleted, False otherwise
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("""
+            UPDATE projects
+            SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND deleted_at IS NULL
+        """, (project_id,))
+        self.conn.commit()
+        success = cursor.rowcount > 0
+        if success:
+            logger.info(f"Soft deleted project {project_id}")
+        return success
 
     # ==================== Template Management ====================
 
@@ -398,18 +521,32 @@ class ComplianceDatabase:
         return dict(row) if row else None
 
     def list_urls(self, project_id: int = None, active_only: bool = True) -> List[Dict]:
-        """List URLs, optionally filtered by project."""
+        """List URLs with check count, optionally filtered by project."""
         cursor = self.conn.cursor()
+
+        base_query = """
+            SELECT
+                u.*,
+                COUNT(c.id) as check_count
+            FROM urls u
+            LEFT JOIN compliance_checks c ON c.url_id = u.id
+        """
+
         if project_id:
             if active_only:
-                cursor.execute("SELECT * FROM urls WHERE project_id = ? AND active = 1", (project_id,))
+                query = base_query + " WHERE u.project_id = ? AND u.active = 1 GROUP BY u.id"
+                cursor.execute(query, (project_id,))
             else:
-                cursor.execute("SELECT * FROM urls WHERE project_id = ?", (project_id,))
+                query = base_query + " WHERE u.project_id = ? GROUP BY u.id"
+                cursor.execute(query, (project_id,))
         else:
             if active_only:
-                cursor.execute("SELECT * FROM urls WHERE active = 1")
+                query = base_query + " WHERE u.active = 1 GROUP BY u.id"
+                cursor.execute(query)
             else:
-                cursor.execute("SELECT * FROM urls")
+                query = base_query + " GROUP BY u.id"
+                cursor.execute(query)
+
         return [dict(row) for row in cursor.fetchall()]
 
     def update_url_last_checked(self, url_id: int):
@@ -419,6 +556,45 @@ class ComplianceDatabase:
             UPDATE urls SET last_checked = CURRENT_TIMESTAMP WHERE id = ?
         """, (url_id,))
         self.conn.commit()
+
+    def update_url(self, url_id: int, active: bool = None, check_frequency_hours: int = None, template_id: str = None) -> bool:
+        """
+        Update URL settings.
+
+        Args:
+            url_id: URL ID
+            active: Active status (optional)
+            check_frequency_hours: Check frequency in hours (optional)
+            template_id: Template ID (optional)
+
+        Returns:
+            True if updated, False otherwise
+        """
+        updates = []
+        params = []
+
+        if active is not None:
+            updates.append("active = ?")
+            params.append(1 if active else 0)
+
+        if check_frequency_hours is not None:
+            updates.append("check_frequency_hours = ?")
+            params.append(check_frequency_hours)
+
+        if template_id is not None:
+            updates.append("template_id = ?")
+            params.append(template_id)
+
+        if not updates:
+            return False
+
+        params.append(url_id)
+        cursor = self.conn.cursor()
+        cursor.execute(f"""
+            UPDATE urls SET {', '.join(updates)} WHERE id = ?
+        """, params)
+        self.conn.commit()
+        return cursor.rowcount > 0
 
     # ==================== Compliance Check Management ====================
 
@@ -431,25 +607,32 @@ class ComplianceDatabase:
         compliance_status: str,
         summary: str,
         llm_input_path: str = None,
-        report_path: str = None
+        report_path: str = None,
+        url_id: int = None,
+        text_analysis_tokens: int = 0,
+        visual_tokens: int = 0,
+        total_tokens: int = 0
     ) -> int:
-        """Save a compliance check result."""
+        """Save a compliance check result with token usage tracking."""
         # Get or create URL
-        url_data = self.get_url(url=url)
-        if url_data:
-            url_id = url_data['id']
-            self.update_url_last_checked(url_id)
+        if url_id is None:
+            url_data = self.get_url(url=url)
+            if url_data:
+                url_id = url_data['id']
+                self.update_url_last_checked(url_id)
+            else:
+                url_id = self.add_url(url, template_id=template_id)
         else:
-            url_id = self.add_url(url, template_id=template_id)
+            self.update_url_last_checked(url_id)
 
         cursor = self.conn.cursor()
         cursor.execute("""
             INSERT INTO compliance_checks
             (url_id, url, state_code, template_id, overall_score, compliance_status,
-             summary, llm_input_path, report_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (url_id, url, state_code, template_id, overall_score, compliance_status,
-              summary, llm_input_path, report_path))
+              summary, llm_input_path, report_path, text_analysis_tokens, visual_tokens, total_tokens))
         self.conn.commit()
         logger.info(f"Saved compliance check for {url}: {overall_score}/100")
         return cursor.lastrowid
@@ -545,19 +728,20 @@ class ComplianceDatabase:
         proximity_description: str = None,
         screenshot_path: str = None,
         cached: bool = False,
-        violation_id: int = None
+        violation_id: int = None,
+        tokens_used: int = 0
     ) -> int:
-        """Save a visual verification result."""
+        """Save a visual verification result with token usage tracking."""
         cursor = self.conn.cursor()
         cursor.execute("""
             INSERT INTO visual_verifications
             (check_id, violation_id, rule_key, rule_text, is_compliant, confidence,
              verification_method, visual_evidence, proximity_description,
-             screenshot_path, cached)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             screenshot_path, cached, tokens_used)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (check_id, violation_id, rule_key, rule_text, is_compliant, confidence,
               verification_method, visual_evidence, proximity_description,
-              screenshot_path, cached))
+              screenshot_path, cached, tokens_used))
         self.conn.commit()
         return cursor.lastrowid
 
@@ -626,19 +810,44 @@ class ComplianceDatabase:
         """, (project_id,))
         total_urls = cursor.fetchone()[0]
 
-        # Recent checks
+        # Total checks count
         cursor.execute("""
-            SELECT
-                COUNT(*) as total_checks,
-                AVG(overall_score) as avg_score,
-                SUM(CASE WHEN compliance_status = 'COMPLIANT' THEN 1 ELSE 0 END) as compliant_count
+            SELECT COUNT(*) as total_checks
             FROM compliance_checks c
             JOIN urls u ON c.url_id = u.id
             WHERE u.project_id = ?
         """, (project_id,))
-        check_stats = dict(cursor.fetchone())
+        total_checks = cursor.fetchone()[0]
 
-        # Recent violations
+        # Average compliance: most recent score for each URL
+        cursor.execute("""
+            SELECT AVG(latest_score) as avg_score
+            FROM (
+                SELECT c.overall_score as latest_score
+                FROM urls u
+                JOIN compliance_checks c ON c.url_id = u.id
+                WHERE u.project_id = ? AND u.active = 1
+                AND c.id = (
+                    SELECT id FROM compliance_checks
+                    WHERE url_id = u.id
+                    ORDER BY checked_at DESC
+                    LIMIT 1
+                )
+            )
+        """, (project_id,))
+        avg_result = cursor.fetchone()
+        avg_score = avg_result[0] if avg_result[0] is not None else 0
+
+        # Compliant count (from all checks)
+        cursor.execute("""
+            SELECT SUM(CASE WHEN compliance_status = 'COMPLIANT' THEN 1 ELSE 0 END) as compliant_count
+            FROM compliance_checks c
+            JOIN urls u ON c.url_id = u.id
+            WHERE u.project_id = ?
+        """, (project_id,))
+        compliant_count = cursor.fetchone()[0] or 0
+
+        # Total violations
         cursor.execute("""
             SELECT COUNT(*) as total_violations
             FROM violations v
@@ -646,14 +855,29 @@ class ComplianceDatabase:
             JOIN urls u ON c.url_id = u.id
             WHERE u.project_id = ?
         """, (project_id,))
-        violation_count = cursor.fetchone()[0]
+        violation_count = cursor.fetchone()[0] or 0
+
+        # Token usage stats
+        cursor.execute("""
+            SELECT
+                SUM(text_analysis_tokens) as total_text_tokens,
+                SUM(visual_tokens) as total_visual_tokens,
+                SUM(total_tokens) as total_tokens
+            FROM compliance_checks c
+            JOIN urls u ON c.url_id = u.id
+            WHERE u.project_id = ?
+        """, (project_id,))
+        token_stats = cursor.fetchone()
 
         return {
             "total_urls": total_urls,
-            "total_checks": check_stats['total_checks'] or 0,
-            "avg_score": round(check_stats['avg_score'], 1) if check_stats['avg_score'] else 0,
-            "compliant_count": check_stats['compliant_count'] or 0,
-            "total_violations": violation_count or 0
+            "total_checks": total_checks,
+            "avg_score": round(avg_score, 1) if avg_score else 0,
+            "compliant_count": compliant_count,
+            "total_violations": violation_count,
+            "total_text_tokens": token_stats[0] or 0,
+            "total_visual_tokens": token_stats[1] or 0,
+            "total_tokens": token_stats[2] or 0
         }
 
     def close(self):

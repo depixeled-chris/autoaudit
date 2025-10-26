@@ -1,0 +1,230 @@
+@use '@styles/variables.scss' as *;
+
+.loading,
+.empty {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.urlList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.urlRow {
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background-color: $color-background;
+  transition: all $transition-fast;
+
+  &.inactive {
+    opacity: 0.6;
+  }
+
+  &:hover {
+    box-shadow: $shadow-sm;
+  }
+}
+
+.urlHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md $spacing-lg;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background-color: $color-surface;
+  }
+}
+
+.urlActions {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-left: auto;
+}
+
+.expandButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $color-text-secondary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $color-text-primary;
+  }
+}
+
+.urlInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.urlMain {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.urlText {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.externalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  color: $color-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+  flex: 1;
+  min-width: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-secondary;
+  }
+
+  .urlText {
+    flex: 1;
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.urlMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.urlDetails {
+  padding: $spacing-lg;
+  padding-top: 0;
+  border-top: 1px solid $color-border;
+  background-color: $color-surface;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.detailItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+
+  svg {
+    color: $color-text-muted;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+.detailLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+}
+
+.detailValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Modal styles
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalLoading {
+  background: var(--color-background);
+  padding: $spacing-xl;
+  border-radius: $radius-md;
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-md;
+
+  p {
+    margin: 0;
+    font-size: $font-size-lg;
+  }
+}
+
+.modalLoadingSubtext {
+  font-size: $font-size-sm !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.modalError {
+  background: var(--color-background);
+  padding: $spacing-xl;
+  border-radius: $radius-md;
+  max-width: 400px;
+  text-align: center;
+
+  p {
+    color: var(--color-text-primary);
+    margin-bottom: $spacing-lg;
+  }
+}

@@ -13,9 +13,13 @@ import os
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from api.routes import projects, urls, checks, templates, reports, auth
+from core.config import CORS_ORIGINS, IS_PRODUCTION
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Log environment on startup
+logger.info(f"Starting in {'PRODUCTION' if IS_PRODUCTION else 'DEVELOPMENT'} mode")
 
 # Create FastAPI app
 app = FastAPI(
@@ -54,13 +58,15 @@ app = FastAPI(
 )
 
 # CORS middleware
+# When using credentials (cookies), we must specify explicit origins, not "*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+logger.info(f"CORS origins: {CORS_ORIGINS}")
 
 # Mount static files for screenshots
 screenshots_dir = Path(__file__).parent.parent / "screenshots"

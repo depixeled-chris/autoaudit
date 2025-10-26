@@ -1,0 +1,238 @@
+@use '@styles/variables.scss' as *;
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.loading,
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-lg;
+  min-height: 50vh;
+  text-align: center;
+  color: $color-text-secondary;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.content {
+  width: 100%;
+}
+
+.projectInfo {
+  padding: $spacing-xl;
+  display: flex;
+  gap: $spacing-xl;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.projectDetails {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.projectPreview {
+  flex: 1 1 400px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
+    flex: 1 1 auto;
+  }
+}
+
+.projectTitle {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  h1 {
+    margin: 0;
+    font-size: $font-size-2xl;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+}
+
+.description {
+  margin: 0 0 $spacing-xl 0;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
+.metadata {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding-top: $spacing-xl;
+  margin-bottom: $spacing-xl;
+  border-top: 1px solid $color-border;
+}
+
+.metadataItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+
+  svg {
+    flex-shrink: 0;
+    color: $color-text-muted;
+  }
+}
+
+.link {
+  color: $color-primary;
+  text-decoration: none;
+  transition: color $transition-fast;
+  word-break: break-all;
+
+  &:hover {
+    color: $color-primary-dark;
+    text-decoration: underline;
+  }
+}
+
+.screenshotContainer {
+  position: relative;
+  border-radius: $radius-md;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  &:hover .screenshotOverlay {
+    opacity: 1;
+  }
+}
+
+.screenshot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $color-surface;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+}
+
+.screenshotOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 40%);
+  opacity: 0;
+  transition: opacity $transition-base;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: $spacing-md;
+}
+
+.screenshotPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-xl;
+  background-color: $color-surface;
+  border-radius: $radius-md;
+  border: 2px dashed $color-border;
+  color: $color-text-muted;
+  min-height: 200px;
+  position: relative;
+
+  svg {
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.placeholderOverlay {
+  position: absolute;
+  top: $spacing-md;
+  right: $spacing-md;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-xl;
+  padding-top: $spacing-xl;
+  border-top: 1px solid $color-border;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: $spacing-lg;
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.statValue {
+  font-size: $font-size-2xl;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.urlsSection {
+  padding: $spacing-xl;
+}
+
+.urlsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
+
+  h2 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+}

@@ -1,0 +1,64 @@
+@use '../../../styles/variables.scss' as *;
+
+.toggle {
+  position: relative;
+  background-color: $color-border;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color $transition-base;
+  padding: 0;
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba($color-primary, 0.2);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &.checked {
+    background-color: $color-primary;
+  }
+
+  &.medium {
+    width: 44px;
+    height: 24px;
+
+    .slider {
+      width: 20px;
+      height: 20px;
+    }
+
+    &.checked .slider {
+      transform: translateX(20px);
+    }
+  }
+
+  &.small {
+    width: 36px;
+    height: 20px;
+
+    .slider {
+      width: 16px;
+      height: 16px;
+    }
+
+    &.checked .slider {
+      transform: translateX(16px);
+    }
+  }
+}
+
+.slider {
+  display: block;
+  background-color: $color-background;
+  border-radius: 9999px;
+  transition: transform $transition-base;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  box-shadow: $shadow-sm;
+}

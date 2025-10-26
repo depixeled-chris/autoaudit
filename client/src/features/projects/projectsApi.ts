@@ -45,11 +45,16 @@ export interface ProjectCreate {
 }
 
 export interface ProjectSummary {
+  project_id: number;
+  project_name: string;
   total_urls: number;
   total_checks: number;
   avg_score: number;
   compliant_count: number;
   total_violations: number;
+  total_text_tokens: number;
+  total_visual_tokens: number;
+  total_tokens: number;
 }
 
 // Create Projects API slice
@@ -84,6 +89,13 @@ export const projectsApi = createApi({
       }),
       invalidatesTags: (_result, _error, id) => [{ type: 'Project', id }],
     }),
+    deleteProject: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/api/projects/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Project'],
+    }),
   }),
 });
 
@@ -93,4 +105,5 @@ export const {
   useCreateProjectMutation,
   useGetProjectSummaryQuery,
   useCaptureProjectScreenshotMutation,
+  useDeleteProjectMutation,
 } = projectsApi;
