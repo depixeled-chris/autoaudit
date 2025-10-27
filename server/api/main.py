@@ -13,6 +13,7 @@ import os
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from api.routes import projects, urls, checks, templates, reports, auth, page_types
+from api import states, preambles, rules, demo
 from core.config import CORS_ORIGINS, IS_PRODUCTION
 
 logging.basicConfig(level=logging.INFO)
@@ -81,6 +82,10 @@ app.include_router(checks.router, prefix="/api/checks", tags=["Compliance Checks
 app.include_router(templates.router, prefix="/api/templates", tags=["Templates"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(page_types.router)
+app.include_router(states.router, prefix="/api")
+app.include_router(preambles.router, prefix="/api")
+app.include_router(rules.router, prefix="/api")
+app.include_router(demo.router, prefix="/api")
 
 
 @app.get("/", tags=["Root"])

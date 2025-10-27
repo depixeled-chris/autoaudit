@@ -5,6 +5,7 @@ import { Button } from '@components/ui/Button';
 import { useCreateProjectMutation, projectsApi } from '../projectsApi';
 import { useDispatch } from 'react-redux';
 import { Loader2, Sparkles } from 'lucide-react';
+import apiClient from '@lib/api/axios';
 import styles from './CreateProjectModal.module.scss';
 
 export interface CreateProjectModalProps {
@@ -84,32 +85,52 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     setErrors({});
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/projects/intelligent-setup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: intelligentUrl }),
+      const response = await apiClient.post('/api/projects/intelligent-setup', {
+        url: intelligentUrl,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to analyze website');
-      }
-
-      const result = await response.json();
-      console.log('Intelligent setup result:', result);
+      console.log('Intelligent setup result:', response.data);
 
       // Invalidate projects cache to refresh the list
       dispatch(projectsApi.util.invalidateTags(['Project']));
 
       setIntelligentUrl('');
       setSetupStatus('');
+      setErrors({});
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Intelligent setup failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Setup failed. Please try manual mode.';
+
+      let errorMessage = 'Setup failed. Please try manual mode.';
+
+      // Check for specific error messages in order of priority
+      if (error.response?.data?.error) {
+        // Custom exception handler sends errors in 'error' field
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.detail) {
+        // FastAPI default sends errors in 'detail' field
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        // Some APIs send errors in 'message' field
+        errorMessage = error.response.data.message;
+      } else if (typeof error.response?.data === 'string') {
+        // Some APIs send error as string
+        errorMessage = error.response.data;
+      } else if (error.message && error.message !== 'Request failed with status code 400') {
+        // Use axios error message if it's not generic
+        errorMessage = error.message;
+      }
+
+      // Check if it's a "no rules" or "no legislation" error and provide helpful guidance
+      if (errorMessage.toLowerCase().includes('no rules') ||
+          errorMessage.toLowerCase().includes('no legislation') ||
+          errorMessage.toLowerCase().includes('no active compliance') ||
+          (errorMessage.toLowerCase().includes('state') && errorMessage.toLowerCase().includes('not configured'))) {
+        errorMessage = 'This state has no compliance rules configured yet. Please go to Config → States to upload legislation and generate rules first.';
+      }
+
       setErrors({ submit: errorMessage });
+      setSetupStatus('');
     } finally {
       setIsAnalyzing(false);
     }

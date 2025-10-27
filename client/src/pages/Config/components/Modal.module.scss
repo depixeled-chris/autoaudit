@@ -1,0 +1,715 @@
+@import '@styles/variables';
+
+.uploadSuccess {
+  padding: $spacing-2xl;
+  text-align: center;
+
+  .successIcon {
+    font-size: 64px;
+    margin-bottom: $spacing-lg;
+  }
+
+  h3 {
+    font-size: $font-size-xl;
+    font-weight: 600;
+    margin: 0 0 $spacing-md 0;
+    color: $color-text-primary;
+  }
+
+  > p {
+    font-size: $font-size-base;
+    color: $color-text-secondary;
+    margin: 0 0 $spacing-xl 0;
+  }
+
+  .nextSteps {
+    background: rgba(#28a745, 0.1);
+    border: 1px solid #28a745;
+    border-radius: $radius-md;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-xl;
+    text-align: left;
+
+    h4 {
+      font-size: $font-size-base;
+      font-weight: 600;
+      margin: 0 0 $spacing-md 0;
+      color: $color-text-primary;
+    }
+
+    ol {
+      margin: 0;
+      padding-left: $spacing-xl;
+
+      li {
+        margin-bottom: $spacing-sm;
+        color: $color-text-primary;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        strong {
+          color: $color-primary;
+        }
+      }
+    }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  background: $color-surface;
+  border-radius: $radius-lg;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+
+  &.large {
+    max-width: 900px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-xl;
+    border-bottom: 1px solid $color-border;
+
+    h2 {
+      margin: 0;
+      font-size: $font-size-xl;
+      font-weight: 600;
+    }
+
+    .closeButton {
+      background: none;
+      border: none;
+      font-size: 32px;
+      line-height: 1;
+      cursor: pointer;
+      color: $color-text-secondary;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+
+      &:hover {
+        color: $color-text-primary;
+      }
+    }
+  }
+
+  .content {
+    padding: $spacing-xl;
+  }
+}
+
+// Config modal content styles (applied outside .modal since base Modal component wraps with its own .content)
+.field {
+  margin-bottom: $spacing-lg;
+
+  label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: $spacing-xs;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+  }
+
+  p {
+    margin: 0;
+    color: $color-text-primary;
+  }
+
+  .fullText {
+    background: $color-surface;
+    padding: $spacing-md;
+    border-radius: $radius-sm;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: $font-size-sm;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  a {
+    color: $color-primary;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// Form styles for various modals
+form {
+  padding: $spacing-xl;
+
+  .formGroup {
+    margin-bottom: $spacing-lg;
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: $spacing-xs;
+      color: $color-text-primary;
+      font-size: $font-size-sm;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: $spacing-sm $spacing-md;
+      background: $color-surface;
+      border: 1px solid $color-border;
+      border-radius: $radius-sm;
+      color: $color-text-primary;
+      font-size: $font-size-sm;
+      font-family: inherit;
+
+      &:focus {
+        outline: none;
+        border-color: $color-primary;
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: $spacing-md;
+    justify-content: flex-end;
+    margin-top: $spacing-xl;
+    padding-top: $spacing-lg;
+    border-top: 1px solid $color-border;
+  }
+}
+
+.primaryButton {
+  padding: $spacing-sm $spacing-lg;
+  background: $color-primary;
+  color: white;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: $color-primary-dark;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryButton {
+  padding: $spacing-sm $spacing-lg;
+  background: transparent;
+  color: $color-text-primary;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: $color-surface;
+  }
+}
+
+.textarea {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+  }
+}
+
+.input {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+  font-family: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+  }
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-lg;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-surface;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+}
+
+.toggleLabel {
+  flex: 1;
+  font-weight: 500;
+  color: $color-text-primary;
+}
+
+.approvedButton,
+.unapprovedButton {
+  padding: $spacing-xs $spacing-md;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.approvedButton {
+  background: #28a745;
+  color: white;
+
+  &:hover {
+    background: #218838;
+  }
+}
+
+.unapprovedButton {
+  background: #ffc107;
+  color: #000;
+
+  &:hover {
+    background: #e0a800;
+  }
+}
+
+.legislationInfo {
+  padding: $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+
+  .statuteNumber {
+    font-weight: 600;
+    color: $color-primary;
+    margin-bottom: $spacing-xs;
+  }
+
+  .title {
+    font-size: $font-size-sm;
+    color: $color-text-primary;
+  }
+}
+
+// Legislation Details Modal styles (outside .modal since base Modal wraps content)
+.metadata {
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1px solid $color-border;
+  display: flex;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
+}
+
+.metadataItem {
+  display: flex;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+}
+
+.metadataLabel {
+  color: $color-text-secondary;
+  font-weight: 500;
+}
+
+.metadataValue {
+  color: $color-text-primary;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-md;
+  justify-content: flex-end;
+  padding: $spacing-xl;
+  border-top: 1px solid $color-border;
+}
+
+.helpText {
+  margin-top: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.4;
+}
+
+.link {
+  color: $color-primary;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.rulesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.rulesActions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.digestButton {
+  padding: $spacing-xs $spacing-md;
+  background: $color-primary;
+  color: white;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: $color-primary-dark;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.rulesSection {
+  margin-top: $spacing-md;
+  padding: $spacing-lg;
+  background: $color-background;
+  border-radius: $radius-md;
+  border: 1px solid $color-border;
+}
+
+.loading {
+  text-align: center;
+  padding: $spacing-lg;
+  color: $color-text-secondary;
+}
+
+.emptyRules {
+  text-align: center;
+  padding: $spacing-xl;
+
+  p {
+    color: $color-text-secondary;
+    margin: 0 0 $spacing-sm 0;
+  }
+}
+
+.rulesList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.ruleCard {
+  padding: $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  transition: all 0.2s ease;
+
+  &.unapproved {
+    background: rgba(#ffc107, 0.1);
+    border-color: #ffc107;
+  }
+}
+
+.ruleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.ruleBadges {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.inactiveBadge,
+.unapprovedBadge {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: 500;
+}
+
+.inactiveBadge {
+  background: rgba(#6c757d, 0.2);
+  color: #6c757d;
+}
+
+.unapprovedBadge {
+  background: rgba(#ffc107, 0.2);
+  color: #d39e00;
+}
+
+.ruleText {
+  font-size: $font-size-sm;
+  line-height: 1.5;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.rulePageTypes {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.rulesCount {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1px solid $color-border;
+  text-align: center;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Tabs
+.tabs {
+  display: flex;
+  gap: $spacing-xs;
+  padding: 0 $spacing-xl;
+  border-bottom: 1px solid $color-border;
+
+  .tab {
+    padding: $spacing-md $spacing-lg;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      color: $color-text-primary;
+    }
+
+    &.active {
+      color: $color-primary;
+      border-bottom-color: $color-primary;
+    }
+  }
+}
+
+// Upload Container
+.uploadContainer {
+  padding: $spacing-xl;
+
+  .dropzone {
+    border: 2px dashed $color-border;
+    border-radius: $radius-md;
+    padding: $spacing-2xl;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: $spacing-lg;
+
+    &:hover {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.05);
+    }
+
+    &.dragging {
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.1);
+    }
+
+    &.hasFile {
+      border-style: solid;
+      border-color: $color-primary;
+      background: rgba($color-primary, 0.05);
+    }
+
+    .dropzoneContent {
+      .uploadIcon {
+        font-size: 48px;
+        margin-bottom: $spacing-md;
+      }
+
+      .dropzoneText {
+        font-size: $font-size-base;
+        color: $color-text-primary;
+        margin: 0 0 $spacing-sm 0;
+      }
+
+      .dropzoneHint {
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+        margin: $spacing-xs 0;
+      }
+    }
+
+    .fileInfo {
+      .fileIcon {
+        font-size: 48px;
+        margin-bottom: $spacing-md;
+      }
+
+      .fileName {
+        font-size: $font-size-base;
+        font-weight: 500;
+        color: $color-text-primary;
+        margin-bottom: $spacing-xs;
+      }
+
+      .fileSize {
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+        margin-bottom: $spacing-md;
+      }
+
+      .removeFile {
+        padding: $spacing-xs $spacing-md;
+        background: transparent;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        color: $color-text-primary;
+        font-size: $font-size-sm;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: #dc3545;
+          color: #dc3545;
+          background: rgba(#dc3545, 0.05);
+        }
+      }
+    }
+  }
+
+  .uploadInfo {
+    background: $color-surface;
+    padding: $spacing-lg;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-lg;
+
+    h3 {
+      font-size: $font-size-base;
+      font-weight: 600;
+      margin: 0 0 $spacing-md 0;
+    }
+
+    p {
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+      margin: 0 0 $spacing-sm 0;
+    }
+
+    ul {
+      margin: $spacing-sm 0;
+      padding-left: $spacing-lg;
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+
+      li {
+        margin-bottom: $spacing-xs;
+      }
+    }
+
+    .reviewNote {
+      margin-top: $spacing-md;
+      padding: $spacing-sm;
+      background: rgba($color-primary, 0.1);
+      border-left: 3px solid $color-primary;
+      border-radius: $radius-sm;
+      color: $color-text-primary;
+    }
+  }
+
+  .errorMessage {
+    padding: $spacing-md;
+    background: rgba(#dc3545, 0.1);
+    border: 1px solid #dc3545;
+    border-radius: $radius-sm;
+    color: #dc3545;
+    font-size: $font-size-sm;
+    margin-bottom: $spacing-lg;
+  }
+}

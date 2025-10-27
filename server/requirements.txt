@@ -15,8 +15,12 @@ html2text==2020.1.16
 # LLM/AI
 openai>=1.30.0
 
+# Document Processing
+PyPDF2==3.0.1
+
 # Database
 # (SQLite is built into Python)
+alembic==1.13.1
 
 # Authentication
 argon2-cffi==23.1.0
@@ -26,3 +30,4 @@ email-validator==2.1.0
 # Utilities
 python-dotenv==1.0.0
 aiofiles==23.2.1
+jinja2==3.1.2

@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { store } from '@store/index';
 import { ThemeProvider } from '@contexts/ThemeContext';
 import { ModalProvider } from '@contexts/ModalContext';
+import { AlertProvider } from '@contexts/AlertContext';
 import { AuthGate, AuthModal } from '@features/auth';
 import { Layout } from '@components/layout';
 import { ProjectsPage, ProjectDetailPage } from '@features/projects';
@@ -18,20 +19,22 @@ function App() {
     <Provider store={store}>
       <ThemeProvider>
         <ModalProvider>
-          <AuthGate>
-            <BrowserRouter>
-              <Layout>
-                <Routes>
-                  <Route path="/projects" element={<ProjectsPage />} />
-                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                  <Route path="/config" element={<ConfigPage />} />
-                  <Route path="/" element={<Navigate to="/projects" replace />} />
-                  <Route path="*" element={<Navigate to="/projects" replace />} />
-                </Routes>
-              </Layout>
-              <AuthModal />
-            </BrowserRouter>
-          </AuthGate>
+          <AlertProvider>
+            <AuthGate>
+              <BrowserRouter>
+                <Layout>
+                  <Routes>
+                    <Route path="/projects" element={<ProjectsPage />} />
+                    <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                    <Route path="/config" element={<ConfigPage />} />
+                    <Route path="/" element={<Navigate to="/projects" replace />} />
+                    <Route path="*" element={<Navigate to="/projects" replace />} />
+                  </Routes>
+                </Layout>
+                <AuthModal />
+              </BrowserRouter>
+            </AuthGate>
+          </AlertProvider>
         </ModalProvider>
       </ThemeProvider>
     </Provider>

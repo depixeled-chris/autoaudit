@@ -1,0 +1,23 @@
+    updateState: builder.mutation<State, { id: number; data: StateUpdate }>({
+      query: ({ id, data }) => ({
+        url: `/api/states/${id}`,
+        method: 'PATCH',
+        body: data,
+      }),
+      async onQueryStarted({ id, data }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: updatedState } = await queryFulfilled;
+          // Manually update the getStateByCode cache
+          dispatch(
+            statesApi.util.updateQueryData('getStateByCode', updatedState.code, (draft) => {
+              Object.assign(draft, updatedState);
+            })
+          );
+        } catch {}
+      },
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'States', id },
+        { type: 'States', id: result?.code },
+        'States',
+      ],
+    }),

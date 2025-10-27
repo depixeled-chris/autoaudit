@@ -1,0 +1,224 @@
+@import '@styles/variables';
+
+.statesTab {
+  .section {
+    margin-bottom: $spacing-2xl;
+
+    .sectionHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: $spacing-xl;
+
+      h2 {
+        font-size: $font-size-xl;
+        font-weight: 600;
+        margin: 0 0 $spacing-xs 0;
+      }
+
+      p {
+        color: $color-text-secondary;
+        margin: 0;
+        font-size: $font-size-sm;
+      }
+    }
+
+    .filterRow {
+      display: flex;
+      align-items: center;
+      gap: $spacing-md;
+    }
+
+    .filterLabel {
+      font-size: $font-size-sm;
+      color: $color-text-secondary;
+      margin: 0;
+    }
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+  }
+
+  .statesTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: $color-surface;
+    border-radius: $radius-md;
+    overflow: hidden;
+
+    thead {
+      background: $color-background;
+      border-bottom: 2px solid $color-border;
+
+      th {
+        padding: $spacing-md $spacing-lg;
+        text-align: left;
+        font-weight: 600;
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom: 1px solid $color-border;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: rgba($color-primary, 0.05);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+        }
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        td {
+          padding: $spacing-md $spacing-lg;
+          font-size: $font-size-sm;
+
+          &.stateName {
+            font-weight: 500;
+          }
+
+          &.stateCode {
+            font-family: monospace;
+            color: $color-text-secondary;
+          }
+
+          &.legislationCount {
+            color: $color-text-secondary;
+          }
+        }
+      }
+    }
+  }
+
+  .configButton {
+    padding: $spacing-xs $spacing-md;
+    background: $color-primary;
+    color: white;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: $color-primary-dark;
+    }
+  }
+
+  .legislationList {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+
+    .legislationCard {
+      padding: $spacing-lg;
+      background: $color-surface;
+      border: 1px solid $color-border;
+      border-radius: $radius-md;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: $color-primary;
+        background: $color-surface;
+      }
+
+      .legislationHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: $spacing-sm;
+
+        .statuteNumber {
+          font-size: $font-size-lg;
+          font-weight: 600;
+          color: $color-primary;
+          margin-bottom: $spacing-xs;
+        }
+
+        .title {
+          font-size: $font-size-base;
+          color: $color-text-primary;
+        }
+
+        .date {
+          font-size: $font-size-sm;
+          color: $color-text-secondary;
+        }
+      }
+
+      .pageTypes {
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+      }
+    }
+  }
+
+  .loading {
+    text-align: center;
+    padding: $spacing-2xl;
+    color: $color-text-secondary;
+  }
+
+  .empty {
+    text-align: center;
+    padding: $spacing-2xl;
+    background: $color-surface;
+    border-radius: $radius-md;
+    border: 1px dashed $color-border;
+
+    p {
+      color: $color-text-secondary;
+      margin: 0 0 $spacing-lg 0;
+    }
+  }
+
+  .primaryButton {
+    padding: $spacing-sm $spacing-lg;
+    background: $color-primary;
+    color: white;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: $color-primary-dark;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .secondaryButton {
+    padding: $spacing-sm $spacing-lg;
+    background: $color-surface;
+    color: $color-text-primary;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: $color-surface;
+      border-color: $color-primary;
+    }
+  }
+}

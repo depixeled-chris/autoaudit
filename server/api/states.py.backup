@@ -1,0 +1,199 @@
+"""API routes for states and legislation management."""
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+
+from core.database import ComplianceDatabase
+from api.dependencies import get_db
+from services.state_service import StateService
+from schemas.state import (
+    StateCreate, StateUpdate, StateResponse, StatesListResponse,
+    LegislationSourceCreate, LegislationSourceUpdate, LegislationSourceResponse,
+    LegislationSourcesListResponse,
+    LegislationDigestCreate, LegislationDigestUpdate, LegislationDigestResponse,
+    LegislationDigestsListResponse
+)
+
+router = APIRouter(prefix="/states", tags=["states"])
+
+
+# States
+@router.post("", response_model=StateResponse, status_code=status.HTTP_201_CREATED)
+async def create_state(
+    state_data: StateCreate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Create a new state."""
+    service = StateService(db)
+    try:
+        return service.create_state(state_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("", response_model=StatesListResponse)
+async def list_states(
+    active_only: bool = False,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """List all states."""
+    service = StateService(db)
+    states = service.list_states(active_only=active_only)
+    return StatesListResponse(states=states, total=len(states))
+
+
+@router.get("/{state_id}", response_model=StateResponse)
+async def get_state(
+    state_id: int,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Get a state by ID."""
+    service = StateService(db)
+    state = service.get_state(state_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="State not found")
+    return state
+
+
+@router.get("/code/{state_code}", response_model=StateResponse)
+async def get_state_by_code(
+    state_code: str,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Get a state by code."""
+    service = StateService(db)
+    state = service.get_state_by_code(state_code)
+    if not state:
+        raise HTTPException(status_code=404, detail="State not found")
+    return state
+
+
+@router.patch("/{state_id}", response_model=StateResponse)
+async def update_state(
+    state_id: int,
+    state_data: StateUpdate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Update a state."""
+    service = StateService(db)
+    try:
+        return service.update_state(state_id, state_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Legislation Sources
+@router.post("/legislation", response_model=LegislationSourceResponse, status_code=status.HTTP_201_CREATED)
+async def create_legislation_source(
+    source_data: LegislationSourceCreate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Create a new legislation source."""
+    service = StateService(db)
+    try:
+        return service.create_legislation_source(source_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/legislation", response_model=LegislationSourcesListResponse)
+async def list_legislation_sources(
+    state_code: Optional[str] = None,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """List legislation sources, optionally filtered by state."""
+    service = StateService(db)
+    sources = service.list_legislation_sources(state_code=state_code)
+    return LegislationSourcesListResponse(sources=sources, total=len(sources))
+
+
+@router.get("/legislation/{source_id}", response_model=LegislationSourceResponse)
+async def get_legislation_source(
+    source_id: int,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Get a legislation source by ID."""
+    service = StateService(db)
+    source = service.get_legislation_source(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Legislation source not found")
+    return source
+
+
+@router.patch("/legislation/{source_id}", response_model=LegislationSourceResponse)
+async def update_legislation_source(
+    source_id: int,
+    source_data: LegislationSourceUpdate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Update a legislation source."""
+    service = StateService(db)
+    try:
+        return service.update_legislation_source(source_id, source_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Legislation Digests
+@router.post("/legislation/{source_id}/digests", response_model=LegislationDigestResponse, status_code=status.HTTP_201_CREATED)
+async def create_legislation_digest(
+    source_id: int,
+    digest_data: LegislationDigestCreate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Create a new legislation digest."""
+    service = StateService(db)
+
+    # Ensure source_id matches
+    if digest_data.legislation_source_id != source_id:
+        raise HTTPException(
+            status_code=400,
+            detail="legislation_source_id in body must match source_id in path"
+        )
+
+    try:
+        return service.create_legislation_digest(digest_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/legislation/{source_id}/digests", response_model=LegislationDigestsListResponse)
+async def list_legislation_digests(
+    source_id: int,
+    approved_only: bool = False,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """List legislation digests for a source."""
+    service = StateService(db)
+    digests = service.list_legislation_digests(
+        legislation_source_id=source_id,
+        approved_only=approved_only
+    )
+    return LegislationDigestsListResponse(digests=digests, total=len(digests))
+
+
+@router.get("/digests/{digest_id}", response_model=LegislationDigestResponse)
+async def get_legislation_digest(
+    digest_id: int,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Get a legislation digest by ID."""
+    service = StateService(db)
+    digest = service.get_legislation_digest(digest_id)
+    if not digest:
+        raise HTTPException(status_code=404, detail="Legislation digest not found")
+    return digest
+
+
+@router.patch("/digests/{digest_id}", response_model=LegislationDigestResponse)
+async def update_legislation_digest(
+    digest_id: int,
+    digest_data: LegislationDigestUpdate,
+    db: ComplianceDatabase = Depends(get_db)
+):
+    """Update a legislation digest."""
+    service = StateService(db)
+    try:
+        return service.update_legislation_digest(digest_id, digest_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -66,6 +66,21 @@ class IntelligentSetupService(BaseService):
                 platform=platform
             )
 
+            # Validate that the state has rules configured
+            state_code = analysis_result['state_code']
+            cursor = self.db.conn.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) FROM rules WHERE state_code = ? AND active = 1",
+                (state_code,)
+            )
+            active_rules_count = cursor.fetchone()[0]
+
+            if active_rules_count == 0:
+                raise ValueError(
+                    f"State {state_code} has no active compliance rules configured. "
+                    "Please go to Config → States to upload legislation and generate rules first."
+                )
+
             # Step 5: Create the project
             project_service = ProjectService(self.db)
 

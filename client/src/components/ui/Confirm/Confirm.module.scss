@@ -1,0 +1,131 @@
+@use '../../../styles/variables.scss' as *;
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: $spacing-xl;
+  gap: $spacing-lg;
+
+  .iconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: $spacing-sm;
+  }
+
+  .icon {
+    stroke-width: 2;
+  }
+
+  .title {
+    font-size: $font-size-xl;
+    font-weight: 600;
+    margin: 0;
+    color: $color-text-primary;
+  }
+
+  .message {
+    color: $color-text-secondary;
+    font-size: $font-size-base;
+    line-height: 1.6;
+    max-width: 400px;
+
+    p {
+      margin: 0 0 $spacing-sm 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: $spacing-md;
+    margin-top: $spacing-md;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cancelButton,
+  .confirmButton {
+    padding: $spacing-sm $spacing-xl;
+    border: none;
+    border-radius: $radius-md;
+    font-size: $font-size-base;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
+
+    &:active {
+      transform: scale(0.98);
+    }
+  }
+
+  .cancelButton {
+    background: transparent;
+    color: $color-text-primary;
+    border: 1px solid $color-border;
+
+    &:hover {
+      background: $color-surface;
+    }
+  }
+
+  // Default variant
+  &.default {
+    .iconWrapper {
+      background: rgba($color-primary, 0.1);
+      color: $color-primary;
+    }
+
+    .confirmButton {
+      background: $color-primary;
+      color: white;
+
+      &:hover {
+        background: $color-primary-dark;
+      }
+    }
+  }
+
+  // Warning variant
+  &.warning {
+    .iconWrapper {
+      background: rgba(#ffc107, 0.1);
+      color: #d39e00;
+    }
+
+    .confirmButton {
+      background: #ffc107;
+      color: #000;
+
+      &:hover {
+        background: #e0a800;
+      }
+    }
+  }
+
+  // Danger variant
+  &.danger {
+    .iconWrapper {
+      background: rgba(#dc3545, 0.1);
+      color: #dc3545;
+    }
+
+    .confirmButton {
+      background: #dc3545;
+      color: white;
+
+      &:hover {
+        background: #c82333;
+      }
+    }
+  }
+}

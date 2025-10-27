@@ -1,9 +1,11 @@
-"""Database migration system."""
+"""Database migration system with auto-discovery."""
 
 import sqlite3
 import logging
+import importlib.util
+import sys
 from pathlib import Path
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Optional
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
@@ -306,35 +308,357 @@ def migration_007_create_llm_calls_table(conn):
     logger.info("Created llm_calls table and index")
 
 
-# All migrations in order
-MIGRATIONS = [
-    Migration(1, "add_base_url", migration_001_add_base_url),
-    Migration(2, "add_screenshot_path", migration_002_add_screenshot_path),
-    Migration(3, "add_deleted_at", migration_003_add_deleted_at),
-    Migration(4, "add_token_tracking", migration_004_add_token_tracking),
-    Migration(5, "add_visual_tokens", migration_005_add_visual_tokens),
-    Migration(6, "add_llm_input_text", migration_006_add_llm_input_text),
-    Migration(7, "create_llm_calls_table", migration_007_create_llm_calls_table),
-]
+def migration_008_add_versioning_and_logging(conn):
+    """
+    Add versioning system and LLM logging.
+
+    This migration adds:
+    1. Digest versioning (version, active columns)
+    2. Rules lineage (digest_id, modification tracking)
+    3. Rule collisions table
+    4. LLM logs table for cost tracking and audit
+    """
+    cursor = conn.cursor()
+
+    logger.info("Starting migration 008: Add versioning and logging")
+
+    # ========================================
+    # 1. Enhance legislation_digests table
+    # ========================================
+    logger.info("Adding version and active columns to legislation_digests")
+
+    try:
+        cursor.execute("ALTER TABLE legislation_digests ADD COLUMN version INTEGER DEFAULT 1")
+        logger.info("Added version column")
+    except sqlite3.OperationalError as e:
+        if 'duplicate column' in str(e).lower():
+            logger.info("version column already exists")
+        else:
+            raise
+
+    try:
+        cursor.execute("ALTER TABLE legislation_digests ADD COLUMN active BOOLEAN DEFAULT 1")
+        logger.info("Added active column")
+    except sqlite3.OperationalError as e:
+        if 'duplicate column' in str(e).lower():
+            logger.info("active column already exists")
+        else:
+            raise
+
+    # Create unique index: only one active digest per source
+    try:
+        cursor.execute("""
+            CREATE UNIQUE INDEX idx_one_active_digest_per_source
+            ON legislation_digests(legislation_source_id, active)
+            WHERE active = 1
+        """)
+        logger.info("Created unique index for active digests")
+    except sqlite3.OperationalError as e:
+        if 'already exists' in str(e).lower():
+            logger.info("Active digest index already exists")
+        else:
+            raise
+
+    # ========================================
+    # 2. Enhance rules table
+    # ========================================
+    logger.info("Adding lineage and modification tracking to rules")
+
+    columns_to_add = [
+        ('legislation_digest_id', 'INTEGER'),
+        ('is_manually_modified', 'BOOLEAN DEFAULT 0'),
+        ('original_rule_text', 'TEXT'),
+        ('status', 'TEXT DEFAULT "active"'),
+        ('supersedes_rule_id', 'INTEGER'),
+    ]
+
+    for column_name, column_type in columns_to_add:
+        try:
+            cursor.execute(f"ALTER TABLE rules ADD COLUMN {column_name} {column_type}")
+            logger.info(f"Added {column_name} column to rules")
+        except sqlite3.OperationalError as e:
+            if 'duplicate column' in str(e).lower():
+                logger.info(f"{column_name} column already exists")
+            else:
+                raise
+
+    # Create indexes
+    try:
+        cursor.execute("CREATE INDEX idx_rules_by_digest ON rules(legislation_digest_id)")
+        logger.info("Created index on legislation_digest_id")
+    except sqlite3.OperationalError as e:
+        if 'already exists' in str(e).lower():
+            logger.info("Index idx_rules_by_digest already exists")
+
+    try:
+        cursor.execute("CREATE INDEX idx_rules_status ON rules(status)")
+        logger.info("Created index on status")
+    except sqlite3.OperationalError as e:
+        if 'already exists' in str(e).lower():
+            logger.info("Index idx_rules_status already exists")
+
+    # ========================================
+    # 3. Populate digest_id for existing rules
+    # ========================================
+    logger.info("Populating digest_id for existing rules")
+
+    cursor.execute("""
+        UPDATE rules
+        SET legislation_digest_id = (
+            SELECT id
+            FROM legislation_digests
+            WHERE legislation_digests.legislation_source_id = rules.legislation_source_id
+            ORDER BY created_at ASC
+            LIMIT 1
+        )
+        WHERE legislation_source_id IS NOT NULL
+        AND legislation_digest_id IS NULL
+    """)
+
+    # Set original_rule_text to current rule_text for existing rules
+    cursor.execute("""
+        UPDATE rules
+        SET original_rule_text = rule_text
+        WHERE original_rule_text IS NULL
+    """)
+
+    # ========================================
+    # 4. Create rule_collisions table
+    # ========================================
+    logger.info("Creating rule_collisions table")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS rule_collisions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            rule_id INTEGER NOT NULL,
+            collides_with_rule_id INTEGER NOT NULL,
+            collision_type TEXT NOT NULL CHECK(
+                collision_type IN ('duplicate', 'semantic', 'conflict', 'overlap', 'supersedes')
+            ),
+            confidence REAL,
+            ai_explanation TEXT,
+            resolution TEXT CHECK(
+                resolution IS NULL OR
+                resolution IN ('keep_both', 'keep_existing', 'keep_new', 'merge', 'pending')
+            ),
+            resolved_by INTEGER,
+            resolved_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY (rule_id)
+                REFERENCES rules(id) ON DELETE CASCADE,
+            FOREIGN KEY (collides_with_rule_id)
+                REFERENCES rules(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_collisions_by_rule
+        ON rule_collisions(rule_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_collisions_by_existing
+        ON rule_collisions(collides_with_rule_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_collisions_pending
+        ON rule_collisions(resolution)
+        WHERE resolution IS NULL OR resolution = 'pending'
+    """)
+
+    logger.info("Created rule_collisions table and indexes")
+
+    # ========================================
+    # 5. Create llm_logs table
+    # ========================================
+    logger.info("Creating llm_logs table")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS llm_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            -- Request Context
+            api_endpoint TEXT NOT NULL,
+            operation_type TEXT NOT NULL,
+            user_id INTEGER,
+
+            -- LLM Details
+            model TEXT NOT NULL,
+            provider TEXT DEFAULT 'openai',
+
+            -- Input/Output
+            input_text TEXT NOT NULL,
+            output_text TEXT NOT NULL,
+            input_tokens INTEGER NOT NULL,
+            output_tokens INTEGER NOT NULL,
+            total_tokens INTEGER NOT NULL,
+
+            -- Cost Tracking
+            input_cost_usd REAL,
+            output_cost_usd REAL,
+            total_cost_usd REAL,
+
+            -- Performance
+            duration_ms INTEGER,
+
+            -- Status
+            status TEXT NOT NULL DEFAULT 'success' CHECK(
+                status IN ('success', 'error', 'timeout')
+            ),
+            error_message TEXT,
+
+            -- Metadata
+            request_id TEXT,
+            related_entity_type TEXT,
+            related_entity_id INTEGER,
+
+            -- Timestamps
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Create indexes for common queries
+    indexes = [
+        ("idx_llm_logs_endpoint", "api_endpoint"),
+        ("idx_llm_logs_operation", "operation_type"),
+        ("idx_llm_logs_model", "model"),
+        ("idx_llm_logs_created", "created_at"),
+        ("idx_llm_logs_user", "user_id"),
+        ("idx_llm_logs_cost", "total_cost_usd"),
+        ("idx_llm_logs_status", "status"),
+    ]
+
+    for index_name, column_name in indexes:
+        cursor.execute(f"""
+            CREATE INDEX IF NOT EXISTS {index_name}
+            ON llm_logs({column_name})
+        """)
+
+    logger.info("Created llm_logs table and indexes")
+
+    conn.commit()
+    logger.info("Migration 008 completed successfully")
+
+
+def discover_migrations_from_directory(migrations_dir: Path) -> List[Migration]:
+    """
+    Auto-discover migration files from a directory.
+
+    Migration files must:
+    - Be named like: 001_description.py, 002_description.py, etc.
+    - Have an upgrade(conn) function
+    - Optionally have a downgrade(conn) function
+
+    Args:
+        migrations_dir: Path to migrations directory
+
+    Returns:
+        List of discovered Migration objects
+    """
+    migrations = []
+
+    if not migrations_dir.exists():
+        logger.warning(f"Migrations directory not found: {migrations_dir}")
+        return migrations
+
+    # Find all .py files that match pattern: NNN_*.py
+    migration_files = sorted(migrations_dir.glob("[0-9][0-9][0-9]_*.py"))
+
+    for file_path in migration_files:
+        try:
+            # Extract version number from filename (e.g., "001" from "001_add_feature.py")
+            filename = file_path.stem
+            version_str = filename.split('_')[0]
+            version = int(version_str)
+            name = '_'.join(filename.split('_')[1:])  # Everything after version
+
+            # Dynamically import the module
+            spec = importlib.util.spec_from_file_location(f"migration_{version}", file_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[f"migration_{version}"] = module
+                spec.loader.exec_module(module)
+
+                # Get upgrade and downgrade functions (try both naming conventions)
+                upgrade_func = getattr(module, 'upgrade', None) or getattr(module, 'up', None)
+                downgrade_func = getattr(module, 'downgrade', None) or getattr(module, 'down', None)
+
+                if not upgrade_func:
+                    logger.error(f"Migration {file_path.name} missing upgrade()/up() function, skipping")
+                    continue
+
+                migrations.append(Migration(version, name, upgrade_func, downgrade_func))
+                logger.debug(f"Discovered migration: v{version} - {name}")
+
+        except Exception as e:
+            logger.error(f"Failed to load migration {file_path.name}: {e}")
+            continue
+
+    return migrations
+
+
+def get_all_migrations() -> List[Migration]:
+    """
+    Get all migrations: both built-in (for backwards compat) and from files.
+
+    Returns:
+        Combined list of all migrations
+    """
+    # Built-in migrations (legacy, for backwards compatibility)
+    builtin_migrations = [
+        Migration(1, "add_base_url", migration_001_add_base_url),
+        Migration(2, "add_screenshot_path", migration_002_add_screenshot_path),
+        Migration(3, "add_deleted_at", migration_003_add_deleted_at),
+        Migration(4, "add_token_tracking", migration_004_add_token_tracking),
+        Migration(5, "add_visual_tokens", migration_005_add_visual_tokens),
+        Migration(6, "add_llm_input_text", migration_006_add_llm_input_text),
+        Migration(7, "create_llm_calls_table", migration_007_create_llm_calls_table),
+        Migration(8, "add_versioning_and_logging", migration_008_add_versioning_and_logging),
+    ]
+
+    # Auto-discover migrations from /app/migrations directory (in Docker)
+    migrations_dir = Path("/app/migrations")
+    logger.info(f"Auto-discovering migrations from: {migrations_dir}")
+    file_migrations = discover_migrations_from_directory(migrations_dir)
+    logger.info(f"Discovered {len(file_migrations)} file-based migrations")
+
+    # Combine and deduplicate (file migrations override builtin if version conflicts)
+    all_migrations = {}
+
+    # Add builtin first
+    for m in builtin_migrations:
+        all_migrations[m.version] = m
+
+    # Override with file-based migrations
+    for m in file_migrations:
+        if m.version in all_migrations:
+            logger.info(f"Migration v{m.version} from file overrides built-in version")
+        all_migrations[m.version] = m
+
+    # Return sorted by version
+    return sorted(all_migrations.values(), key=lambda m: m.version)
 
 
 def run_migrations(db_path: str):
     """
-    Run all pending migrations.
+    Run all pending migrations (auto-discovers from files).
 
     Args:
         db_path: Path to SQLite database
     """
+    migrations = get_all_migrations()
     runner = MigrationRunner(db_path)
     try:
-        runner.run_migrations(MIGRATIONS)
+        runner.run_migrations(migrations)
     finally:
         runner.close()
 
 
 def get_migration_status(db_path: str) -> Dict:
     """
-    Get migration status.
+    Get migration status (auto-discovers from files).
 
     Args:
         db_path: Path to SQLite database
@@ -342,9 +666,10 @@ def get_migration_status(db_path: str) -> Dict:
     Returns:
         Migration status dictionary
     """
+    migrations = get_all_migrations()
     runner = MigrationRunner(db_path)
     try:
-        return runner.get_status(MIGRATIONS)
+        return runner.get_status(migrations)
     finally:
         runner.close()
 

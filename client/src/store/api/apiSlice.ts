@@ -5,12 +5,12 @@ import apiClient from '@lib/api/axios';
 // Axios base query for RTK Query
 const axiosBaseQuery =
   () =>
-  async ({ url, method = 'GET', data, params }: AxiosRequestConfig & { url: string }) => {
+  async ({ url, method = 'GET', data, body, params }: AxiosRequestConfig & { url: string; body?: any }) => {
     try {
       const result = await apiClient({
         url,
         method,
-        data,
+        data: body || data, // RTK Query uses 'body', axios uses 'data'
         params,
       });
       return { data: result.data };
@@ -115,7 +115,19 @@ export interface VisualVerification {
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Project', 'URL', 'Check'],
+  tagTypes: [
+    'Project',
+    'URL',
+    'Check',
+    'States',
+    'LegislationSources',
+    'LegislationDigests',
+    'PreambleTemplates',
+    'Preambles',
+    'PreambleVersions',
+    'PreambleTestRuns',
+    'Rules',
+  ],
   endpoints: (builder) => ({
     // Projects
     getProjects: builder.query<Project[], void>({
@@ -130,7 +142,7 @@ export const apiSlice = createApi({
       query: (data) => ({
         url: '/api/projects',
         method: 'POST',
-        data,
+        data: body || data, // RTK Query uses 'body', axios uses 'data'
       }),
       invalidatesTags: ['Project'],
     }),
@@ -154,7 +166,7 @@ export const apiSlice = createApi({
       query: (data) => ({
         url: '/api/urls',
         method: 'POST',
-        data,
+        data: body || data, // RTK Query uses 'body', axios uses 'data'
       }),
       invalidatesTags: ['URL'],
     }),
@@ -184,7 +196,7 @@ export const apiSlice = createApi({
       query: (data) => ({
         url: '/api/checks',
         method: 'POST',
-        data,
+        data: body || data, // RTK Query uses 'body', axios uses 'data'
       }),
       invalidatesTags: ['Check'],
     }),
@@ -193,6 +205,9 @@ export const apiSlice = createApi({
     }),
   }),
 });
+
+// Export as both apiSlice and api (for injected endpoints)
+export const api = apiSlice;
 
 export const {
   useGetProjectsQuery,

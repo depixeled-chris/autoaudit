@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '@components/ui/Modal';
 import { Button } from '@components/ui/Button';
 import { Toggle } from '@components/ui/Toggle';
+import { useAlert } from '@contexts/AlertContext';
 import type { MonitoredURL } from '../urlsApi';
 import styles from './EditURLModal.module.scss';
 
@@ -26,6 +27,7 @@ const EditURLModal: React.FC<EditURLModalProps> = ({ url, isOpen, onClose, onSav
   const [active, setActive] = useState(url.active);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { showConfirm } = useAlert();
 
   // Update form when URL changes
   useEffect(() => {
@@ -51,9 +53,14 @@ const EditURLModal: React.FC<EditURLModalProps> = ({ url, isOpen, onClose, onSav
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this URL? This action cannot be undone.')) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Delete URL',
+      message: 'Are you sure you want to delete this URL? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
 
     setIsDeleting(true);
     try {

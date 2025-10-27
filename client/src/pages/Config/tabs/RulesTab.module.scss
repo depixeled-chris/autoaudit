@@ -1,0 +1,313 @@
+@import '@styles/variables';
+
+.rulesTab {
+  .section {
+    margin-bottom: $spacing-2xl;
+
+    .sectionHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: $spacing-xl;
+
+      h2 {
+        font-size: $font-size-xl;
+        font-weight: 600;
+        margin: 0 0 $spacing-xs 0;
+      }
+
+      p {
+        color: $color-text-secondary;
+        margin: 0;
+        font-size: $font-size-sm;
+      }
+    }
+  }
+
+  .filterControls {
+    display: flex;
+    align-items: center;
+    gap: $spacing-lg;
+    margin-bottom: $spacing-xl;
+    padding: $spacing-lg;
+    background: $color-surface;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+    flex-wrap: wrap;
+  }
+
+  .filterRow {
+    display: flex;
+    align-items: center;
+    gap: $spacing-md;
+  }
+
+  .filterLabel {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .stateSelect {
+    padding: $spacing-xs $spacing-md;
+    background: $color-background;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    color: $color-text-primary;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    min-width: 200px;
+
+    &:focus {
+      outline: none;
+      border-color: $color-primary;
+    }
+  }
+
+  .digestButton {
+    margin-left: auto;
+    padding: $spacing-xs $spacing-md;
+    background: $color-primary;
+    color: white;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background: $color-primary-dark;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+  }
+
+  .rulesTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: $color-surface;
+    border-radius: $radius-md;
+    overflow: hidden;
+
+    thead {
+      background: $color-background;
+      border-bottom: 2px solid $color-border;
+
+      th {
+        padding: $spacing-md $spacing-lg;
+        text-align: left;
+        font-weight: 600;
+        font-size: $font-size-sm;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    tbody {
+      tr {
+        border-bottom: 1px solid $color-border;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: rgba($color-primary, 0.05);
+        }
+
+        &.disabled {
+          opacity: 0.5;
+        }
+
+        &.unapproved {
+          background: rgba(#ffc107, 0.1);
+
+          &:hover {
+            background: rgba(#ffc107, 0.15);
+          }
+        }
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        td {
+          padding: $spacing-md $spacing-lg;
+          font-size: $font-size-sm;
+
+          &.stateCode {
+            font-family: monospace;
+            color: $color-text-secondary;
+            font-weight: 500;
+          }
+
+          &.ruleText {
+            max-width: 500px;
+            line-height: 1.5;
+
+            .expandButton {
+              display: inline-block;
+              margin-left: $spacing-sm;
+              padding: $spacing-xs $spacing-sm;
+              background: transparent;
+              color: $color-primary;
+              border: none;
+              font-size: $font-size-xs;
+              font-weight: 500;
+              cursor: pointer;
+              text-decoration: underline;
+
+              &:hover {
+                color: $color-primary-dark;
+              }
+            }
+          }
+
+          &.digestId {
+            font-size: $font-size-xs;
+            text-align: center;
+            width: 80px;
+          }
+
+          &.pageTypes {
+            color: $color-text-secondary;
+            font-size: $font-size-xs;
+          }
+
+          &.flagsCell {
+            display: flex;
+            align-items: center;
+            gap: $spacing-xs;
+            width: 100px;
+          }
+
+          &.actions {
+            white-space: nowrap;
+          }
+        }
+      }
+    }
+  }
+
+  .checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: $color-primary;
+  }
+
+  .digestBadge {
+    display: inline-block;
+    padding: $spacing-xs $spacing-sm;
+    background: rgba($color-primary, 0.15);
+    color: $color-primary;
+    border-radius: $radius-sm;
+    font-family: monospace;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    border: 1px solid rgba($color-primary, 0.3);
+  }
+
+  .noDigest {
+    color: $color-text-secondary;
+    font-size: $font-size-xs;
+  }
+
+  .statusCell {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+  }
+
+  .statusBadge {
+    display: inline-block;
+    padding: $spacing-xs $spacing-sm;
+    background: $color-surface;
+    color: $color-text-secondary;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    text-transform: capitalize;
+    border: 1px solid $color-border;
+  }
+
+  .modifiedBadge {
+    font-size: $font-size-sm;
+    cursor: help;
+  }
+
+  .editButton {
+    padding: $spacing-xs $spacing-md;
+    background: $color-primary;
+    color: white;
+    border: none;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: $spacing-xs;
+
+    &:hover {
+      background: $color-primary-dark;
+    }
+  }
+
+  .deleteButton {
+    padding: $spacing-xs $spacing-md;
+    background: transparent;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+    border-radius: $radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #dc3545;
+      color: white;
+    }
+  }
+
+  .tableFooter {
+    margin-top: $spacing-md;
+    padding: $spacing-md;
+    background: $color-surface;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+  }
+
+  .resultCount {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    text-align: center;
+  }
+
+  .loading {
+    text-align: center;
+    padding: $spacing-2xl;
+    color: $color-text-secondary;
+  }
+
+  .empty {
+    text-align: center;
+    padding: $spacing-2xl;
+    background: $color-surface;
+    border-radius: $radius-md;
+    border: 1px dashed $color-border;
+
+    p {
+      color: $color-text-secondary;
+      margin: 0;
+    }
+  }
+}

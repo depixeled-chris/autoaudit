@@ -16,7 +16,7 @@
 
   &.success {
     border-color: $color-success;
-    background-color: rgba($color-success, 0.1);
+    background-color: $color-surface;
 
     .icon {
       color: $color-success;
@@ -25,7 +25,7 @@
 
   &.error {
     border-color: $color-error;
-    background-color: rgba($color-error, 0.1);
+    background-color: $color-surface;
 
     .icon {
       color: $color-error;
@@ -34,7 +34,7 @@
 
   &.warning {
     border-color: $color-warning;
-    background-color: rgba($color-warning, 0.1);
+    background-color: $color-surface;
 
     .icon {
       color: $color-warning;
@@ -43,7 +43,7 @@
 
   &.info {
     border-color: $color-primary;
-    background-color: rgba($color-primary, 0.1);
+    background-color: $color-surface;
 
     .icon {
       color: $color-primary;

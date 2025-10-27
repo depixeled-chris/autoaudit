@@ -9,6 +9,7 @@ import { Badge } from '@components/ui/Badge';
 import { Toggle } from '@components/ui/Toggle';
 import { ToastContainer } from '@components/ui/Toast';
 import { useToast } from '@hooks/useToast';
+import { useAlert } from '@contexts/AlertContext';
 import styles from './URLList.module.scss';
 
 interface URLListProps {
@@ -78,6 +79,7 @@ export const URLList = ({ projectId }: URLListProps) => {
   const [selectedUrlId, setSelectedUrlId] = useState<number | null>(null);
   const [editingUrl, setEditingUrl] = useState<MonitoredURL | null>(null);
   const { toasts, removeToast, success, error, info } = useToast();
+  const { showConfirm } = useAlert();
 
   const handleToggleActive = async (url: MonitoredURL) => {
     try {
@@ -88,12 +90,19 @@ export const URLList = ({ projectId }: URLListProps) => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to deactivate this URL?')) {
-      try {
-        await deleteURL(id).unwrap();
-      } catch (error) {
-        console.error('Failed to delete URL:', error);
-      }
+    const confirmed = await showConfirm({
+      title: 'Deactivate URL',
+      message: 'Are you sure you want to deactivate this URL?',
+      confirmText: 'Deactivate',
+      variant: 'warning',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await deleteURL(id).unwrap();
+    } catch (error) {
+      console.error('Failed to delete URL:', error);
     }
   };
 

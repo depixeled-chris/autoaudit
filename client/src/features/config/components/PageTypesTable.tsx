@@ -11,6 +11,7 @@ import { Button } from '@components/ui/Button';
 import { Toggle } from '@components/ui/Toggle';
 import { ToastContainer } from '@components/ui/Toast';
 import { useToast } from '@hooks/useToast';
+import { useAlert } from '@contexts/AlertContext';
 import { PageTypeSettingsModal } from './PageTypeSettingsModal';
 import styles from './PageTypesTable.module.scss';
 
@@ -25,6 +26,7 @@ export const PageTypesTable = () => {
   const [newPageType, setNewPageType] = useState({ code: '', name: '', description: '' });
   const [settingsPageType, setSettingsPageType] = useState<PageType | null>(null);
   const { toasts, removeToast, success, error } = useToast();
+  const { showConfirm } = useAlert();
 
   const handleToggleActive = async (pageType: PageType) => {
     try {
@@ -37,9 +39,14 @@ export const PageTypesTable = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this page type? This action cannot be undone.')) {
-      return;
-    }
+    const confirmed = await showConfirm({
+      title: 'Delete Page Type',
+      message: 'Are you sure you want to delete this page type? This action cannot be undone.',
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
 
     try {
       await deletePageType(id).unwrap();

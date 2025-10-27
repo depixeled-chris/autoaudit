@@ -1,0 +1,6 @@
+    getStateByCode: builder.query<State, string>({
+      query: (code) => ({
+        url: `/api/states/code/${code}`,
+      }),
+      providesTags: (result, error, code) => [{ type: 'States', id: code }],
+    }),

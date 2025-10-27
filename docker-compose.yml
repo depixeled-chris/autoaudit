@@ -19,6 +19,7 @@ services:
       - ./server/core:/app/core
       - ./server/services:/app/services
       - ./server/schemas:/app/schemas
+      - ./server/migrations:/app/migrations
       # Persist database
       - ./server/data:/app/data
       # Persist screenshots
