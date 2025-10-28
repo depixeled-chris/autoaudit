@@ -127,6 +127,9 @@ export const apiSlice = createApi({
     'PreambleVersions',
     'PreambleTestRuns',
     'Rules',
+    'LLMLogs',
+    'LLMStats',
+    'ModelConfigs',
   ],
   endpoints: (builder) => ({
     // Projects

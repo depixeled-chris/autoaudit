@@ -14,16 +14,11 @@ services:
       - PYTHONUNBUFFERED=1
       - WATCHFILES_FORCE_POLLING=true  # Required for WSL2/Windows Docker file watching
     volumes:
-      # Mount source code for live reload
-      - ./server/api:/app/api
-      - ./server/core:/app/core
-      - ./server/services:/app/services
-      - ./server/schemas:/app/schemas
-      - ./server/migrations:/app/migrations
-      # Persist database
-      - ./server/data:/app/data
-      # Persist screenshots
-      - ./server/screenshots:/app/screenshots
+      # Mount entire server for live reload
+      - ./server:/app
+      # Exclude Python cache and virtual env from mount
+      - /app/__pycache__
+      - /app/.pytest_cache
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]

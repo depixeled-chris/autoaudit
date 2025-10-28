@@ -14,6 +14,7 @@ from datetime import datetime
 from openai import AsyncOpenAI
 
 from core.database import ComplianceDatabase
+from core.llm_operations import validate_operation_type
 
 logger = logging.getLogger(__name__)
 
@@ -81,13 +82,46 @@ class LLMClient:
         """
         self.client = AsyncOpenAI()
         self.db = db
+        self._model_cache = {}  # Cache for model configurations
+
+    def _get_configured_model(self, operation_type: str, default: str = 'gpt-4o-mini') -> str:
+        """
+        Get the configured model for an operation type.
+
+        Args:
+            operation_type: Operation type to look up
+            default: Default model if not configured
+
+        Returns:
+            Model name to use
+        """
+        # Check cache first
+        if operation_type in self._model_cache:
+            return self._model_cache[operation_type]
+
+        # Query database
+        cursor = self.db.conn.cursor()
+        cursor.execute(
+            "SELECT model FROM llm_model_config WHERE operation_type = ?",
+            (operation_type,)
+        )
+        row = cursor.fetchone()
+
+        if row:
+            model = row[0]
+            self._model_cache[operation_type] = model
+            return model
+
+        # Use default
+        self._model_cache[operation_type] = default
+        return default
 
     async def chat_completion(
         self,
         messages: List[Dict[str, str]],
-        model: str = 'gpt-4o-mini',
-        operation_type: str,
-        api_endpoint: str,
+        model: Optional[str] = None,
+        operation_type: str = 'general',
+        api_endpoint: str = '',
         user_id: Optional[int] = None,
         related_entity_type: Optional[str] = None,
         related_entity_id: Optional[int] = None,
@@ -98,8 +132,9 @@ class LLMClient:
 
         Args:
             messages: List of message dicts (role + content)
-            model: Model to use (default: gpt-4o-mini)
-            operation_type: Operation category (e.g., 'parse_legislation', 'generate_rules')
+            model: Model to use (if None, uses configured model for operation_type)
+            operation_type: Must be a constant from core.llm_operations
+                           (PARSE_LEGISLATION, GENERATE_RULES, DETECT_COLLISIONS, etc.)
             api_endpoint: API endpoint that invoked this call
             user_id: User who triggered the operation
             related_entity_type: Type of entity (e.g., 'legislation_source', 'digest')
@@ -115,8 +150,20 @@ class LLMClient:
                 - cost_usd: Cost in USD
 
         Raises:
+            ValueError: If operation_type is not a valid constant
             Exception: If OpenAI API call fails (error is logged before re-raising)
         """
+        # Validate operation type
+        if not validate_operation_type(operation_type):
+            raise ValueError(
+                f"Invalid operation_type: '{operation_type}'. "
+                f"Must use constants from core.llm_operations (e.g., PARSE_LEGISLATION, GENERATE_RULES)"
+            )
+
+        # Get configured model if not specified
+        if model is None:
+            model = self._get_configured_model(operation_type)
+
         request_id = str(uuid.uuid4())
 
         # Combine all messages for logging

@@ -4,9 +4,10 @@ import StatesTab from './Config/tabs/StatesTab';
 import PreamblesTab from './Config/tabs/PreamblesTab';
 import RulesTab from './Config/tabs/RulesTab';
 import OtherTab from './Config/tabs/OtherTab';
+import { LLMTab } from './Config/tabs/LLMTab';
 import styles from './ConfigPage.module.scss';
 
-type TabType = 'page-types' | 'states' | 'preambles' | 'rules' | 'other';
+type TabType = 'page-types' | 'states' | 'preambles' | 'rules' | 'other' | 'llm';
 
 export const ConfigPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('page-types');
@@ -51,6 +52,12 @@ export const ConfigPage: React.FC = () => {
         >
           Other
         </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'llm' ? styles.active : ''}`}
+          onClick={() => setActiveTab('llm')}
+        >
+          LLM Usage
+        </button>
       </div>
 
       <div className={styles.tabContent}>
@@ -65,6 +72,7 @@ export const ConfigPage: React.FC = () => {
         {activeTab === 'rules' && <RulesTab />}
         {activeTab === 'preambles' && <PreamblesTab />}
         {activeTab === 'other' && <OtherTab />}
+        {activeTab === 'llm' && <LLMTab />}
       </div>
     </div>
   );

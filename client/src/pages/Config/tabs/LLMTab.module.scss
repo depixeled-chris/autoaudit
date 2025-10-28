@@ -1,0 +1,252 @@
+@import '@styles/variables';
+
+.loading {
+  padding: $spacing-2xl;
+  text-align: center;
+  color: $color-text-secondary;
+  font-size: $font-size-base;
+}
+
+// Stats Section
+.statsSection {
+  margin-bottom: $spacing-2xl;
+
+  h3 {
+    margin: 0 0 $spacing-lg 0;
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: $spacing-md;
+  margin-bottom: $spacing-xl;
+}
+
+.statCard {
+  background: $color-background;
+  padding: $spacing-md;
+  border-radius: $radius-md;
+  box-shadow: $shadow-sm;
+  border: 1px solid $color-border;
+
+  .statLabel {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: $spacing-sm;
+  }
+
+  .statValue {
+    font-size: $font-size-2xl;
+    font-weight: bold;
+    color: $color-primary;
+  }
+}
+
+.breakdown {
+  margin-top: $spacing-xl;
+}
+
+// Model Configuration
+.configSection {
+  margin-bottom: $spacing-2xl;
+
+  h3 {
+    margin: 0 0 $spacing-sm 0;
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  .description {
+    margin-bottom: $spacing-lg;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+  }
+}
+
+.modelSelect {
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-family: $font-family-mono;
+  background: $color-background;
+  color: $color-text-primary;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $color-text-muted;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $color-primary;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+// Logs Section
+.logsSection {
+  margin-bottom: $spacing-2xl;
+
+  h3 {
+    margin: 0 0 $spacing-md 0;
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+}
+
+.logsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+  padding: $spacing-md;
+  background: $color-surface;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+
+  .totalCost {
+    font-weight: 600;
+    color: $color-primary;
+  }
+}
+
+// Table Styles
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: $color-background;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  thead {
+    background: $color-surface;
+    border-bottom: 2px solid $color-border;
+
+    th {
+      padding: $spacing-md;
+      text-align: left;
+      font-size: $font-size-xs;
+      font-weight: 600;
+      color: $color-text-primary;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $color-border;
+      transition: background-color $transition-fast;
+
+      &:hover {
+        background: $color-surface;
+        cursor: pointer;
+      }
+
+      &.selected {
+        background: $color-primary-bg;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: $spacing-md;
+      font-size: $font-size-sm;
+      color: $color-text-primary;
+
+      code {
+        font-family: $font-family-mono;
+        font-size: $font-size-xs;
+        background: $color-surface;
+        padding: 2px 6px;
+        border-radius: $radius-sm;
+        color: $color-error;
+      }
+    }
+  }
+}
+
+.tableContainer {
+  overflow-x: auto;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-md;
+}
+
+.status {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: 500;
+
+  &.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: $color-success;
+  }
+
+  &.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: $color-error;
+  }
+
+  &.timeout {
+    background: rgba(245, 158, 11, 0.1);
+    color: $color-warning;
+  }
+}
+
+// Log Detail
+.logDetail {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+}
+
+.logDetailContent {
+  .detailSection {
+    margin-bottom: $spacing-lg;
+
+    strong {
+      display: block;
+      margin-bottom: $spacing-sm;
+      color: $color-text-primary;
+      font-size: $font-size-sm;
+    }
+  }
+
+  .codeBlock,
+  .errorBlock {
+    background: rgba(0, 0, 0, 0.05);
+    color: $color-text-primary;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    border: 1px solid $color-border;
+    font-family: $font-family-mono;
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .errorBlock {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: $color-error;
+    color: $color-error;
+  }
+}
