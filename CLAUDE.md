@@ -1,181 +1,103 @@
 # AutoAudit Project Documentation
 
-**Last Updated**: 2025-10-27
-**Purpose**: Automotive dealership compliance monitoring system
-
-## 🎯 Quick Navigation
-
-### For Users & Developers
-**[README.md](README.md)** - Project overview, quick start, features, and setup instructions
-
-### For AI Agents (Context Management)
-**This file (CLAUDE.md)** - Documentation navigation hub with links to detailed technical docs
+**Last Updated**: 2025-10-28
 
 ---
 
-## 📚 Documentation Tree
+## 🧠 Principles for AI Agents
 
-**Treat these docs as external memory - navigate to specific docs as needed instead of loading everything into context.**
+**CRITICAL**: This documentation system is your external long-term memory. Neglecting it is to forget it. Your context window is small and you have a very limited memory otherwise. You're basically afflicted similar to Lenny from Memento. If you don't write it down, it's forgotten in short order.
 
-### Core Technical Docs
-1. **[DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - All 27 tables, current state, missing components
-2. **[MIGRATION_SYSTEM.md](docs/MIGRATION_SYSTEM.md)** - ⚠️ TWO migration systems exist (critical to understand)
-3. **[API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** - All ~80 REST endpoints with examples
-4. **[FRONTEND_STRUCTURE.md](docs/FRONTEND_STRUCTURE.md)** - React app, RTK Query, component patterns
-5. **[PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** - Directory layout, file organization rules
-6. **[WORKFLOWS.md](docs/WORKFLOWS.md)** - 10 end-to-end user workflows
-7. **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Commands, debugging, troubleshooting
-8. **[DESIGN_NOTES.md](docs/DESIGN_NOTES.md)** - Design decisions for versioning system
+### Core Principles
+1. **Documentation IS long-term memory** - Context resets, documentation doesn't. Navigate to docs as needed.
+2. **README.md is the root** - Always start there for overview, then navigate to specific docs. Keep it concise so that you don't have to store a large volume of information in your context window. Critical info in README.md. Deeper dives in the drilldown documents.
+3. **Don't load everything into context** - Treat docs as external memory, read what you need when you need it.
+4. **Update docs BEFORE every commit** - Outdated docs are worse than no docs.
+5. **No duplication** - Each piece of info lives in ONE place, link to it instead of copying.
+6. **TODO docs are your work log** - CLAUDE.md is guiding set of critical principles, not a task tracker. PLEASE ASK if you should remember something in CLAUDE.md before doing so.
+7. **BE CAREFUL when updating documents** - Don't completely rewrite the documents. Archive and ammend as needed. Development is an iterative process, not inventing a completely new version of reality when it suits you. We build on the past, not overwrite it.Let's do
 
-### Reference
-- **Tech Stack**: FastAPI + React + TypeScript + SQLite + OpenAI GPT-4o-mini
-- **Deployment**: Docker Compose (ports: server=8000, client=5173)
-- **Database**: `server/data/compliance.db` → `/app/data/compliance.db` in Docker
-
----
-
-## 🏗️ Major Documentation Principles
-
-1. **Keep docs updated** - When you change code, update the relevant doc
-2. **No duplication** - Each piece of info lives in ONE place
-3. **Tree structure** - CLAUDE.md is the trunk, docs/* are branches
-4. **External memory** - Don't load everything into context, navigate as needed
-5. **Link, don't repeat** - Reference other docs instead of copying content
-
----
-
-## 🚨 Critical Issues (As of 2025-10-27)
-
-### 1. TWO Migration Systems
-See [MIGRATION_SYSTEM.md](docs/MIGRATION_SYSTEM.md) for full details.
-
-- **Active**: `core/migrations.py` (inline functions, auto-runs)
-- **Orphaned**: `server/migrations/*.py` (separate files, NOT mounted in Docker)
-- **Mystery**: Migration 13 was applied from orphaned system somehow
-
-### 2. Database Incomplete
-See [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for full details.
-
-- ❌ `rules` table missing 5 lineage columns
-- ❌ `rule_collisions` table doesn't exist
-- ❌ `llm_logs` table doesn't exist
-- ✅ `legislation_digests` HAS version & active columns
-
-### 3. Docker Volume Mounts (Server)
-```
-✅ ./server/api:/app/api
-✅ ./server/core:/app/core
-✅ ./server/services:/app/services
-✅ ./server/schemas:/app/schemas
-✅ ./server/data:/app/data
-❌ ./server/migrations:/app/migrations  # NOT MOUNTED - files are orphaned
-```
-
----
-
-## 🗺️ Data Hierarchy
-
-```
-States (OK, TX, etc.)
-  └── Legislation Sources (statutory PDFs)
-       └── Legislation Digests (AI interpretations, versioned)
-            └── Rules (atomic compliance requirements)
-                 └── Projects (dealership sites)
-                      └── URLs (specific pages)
-                           └── Compliance Checks (violations detected)
-```
-
----
-
-## 🎯 Getting Started
-
-### First Time Reading
-1. Read [README.md](README.md) - Project overview and quick start
-2. Read this file (CLAUDE.md) - Understand documentation structure
-3. Read [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) - Understand data model
-4. Read [MIGRATION_SYSTEM.md](docs/MIGRATION_SYSTEM.md) - Understand migration mess
-5. Pick specific docs based on your task
-
-### Working on Features
-- **Database change?** → [MIGRATION_SYSTEM.md](docs/MIGRATION_SYSTEM.md)
-- **API endpoint?** → [API_ENDPOINTS.md](docs/API_ENDPOINTS.md)
-- **Frontend component?** → [FRONTEND_STRUCTURE.md](docs/FRONTEND_STRUCTURE.md)
-- **User workflow?** → [WORKFLOWS.md](docs/WORKFLOWS.md)
-- **Need commands?** → [DEVELOPMENT.md](docs/DEVELOPMENT.md)
+### Dev Environment Principles
+1. **Don't run Python outside of a Docker container without approval.** I prefer that you run all operations within Docker where you should have all the dependencies you need.
 
 ### When Context Resets
-1. Start with this file (CLAUDE.md)
-2. Check "Critical Issues" section for current state
-3. Navigate to specific docs as needed
-4. **Don't try to hold everything in memory**
+1. Read this file (CLAUDE.md) first - get oriented
+2. Read README.md - understand project overview
+3. Navigate to specific docs based on your task
+4. Check TODO files to see current/pending/completed work
 
----
-
-## 📂 Quick Reference
-
-### Project Structure (Brief)
+### Documentation Structure
 ```
-autoaudit/
-├── server/              # FastAPI backend
-│   ├── api/             # Routes (main.py, states.py, rules.py, etc.)
-│   ├── core/            # Database, migrations, LLM client
-│   ├── services/        # Business logic
-│   └── data/            # SQLite database
-├── client/
-│   ├── src/
-│   │   ├── pages/Config/  # Config page with tabs
-│   │   ├── features/      # Feature modules
-│   │   └── store/api/     # RTK Query
-├── docs/                # 📚 All documentation (you are here)
-├── README.md            # User-facing overview
-└── CLAUDE.md            # This file - Agent navigation hub
+README.md (Root - user-facing overview, tech stack, quick start)
+  ├── CLAUDE.md (This file - AI agent principles & navigation)
+  └── docs/* (Detailed technical documentation)
+        ├── Technical: DATABASE_SCHEMA, API_ENDPOINTS, FRONTEND_STRUCTURE, etc.
+        └── Work Logs: TODO_NEW, TODO_IN_PROGRESS, TODO_COMPLETED, TODO_BACKLOG
 ```
 
-### Common Commands
-```bash
-# Start services
-docker-compose up
+---
 
-# Check migrations
-docker-compose exec server python manage.py migration:status
+## 📚 Documentation Index
 
-# View logs
-docker-compose logs -f server
+**Start with [README.md](README.md)** - User-facing overview, tech stack, architecture, quick start
 
-# Database operations
-docker-compose exec server sh -c "python -c \"...\""
-```
+### Technical Documentation
+- **[docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - 31 tables, Alembic migrations
+- **[docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md)** - 86 REST endpoints with examples
+- **[docs/FRONTEND_STRUCTURE.md](docs/FRONTEND_STRUCTURE.md)** - React components, RTK Query, 6 config tabs
+- **[docs/MIGRATION_SYSTEM.md](docs/MIGRATION_SYSTEM.md)** - Alembic workflow, creating migrations
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Docker commands, debugging, troubleshooting
+- **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** - Directory layout, file organization
+- **[docs/WORKFLOWS.md](docs/WORKFLOWS.md)** - 10 end-to-end user workflows
+- **[docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md)** - Architecture decisions, versioning system
 
-See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for complete command reference.
+### Work Logs (TODO System)
+- **[docs/TODO_NEW.md](docs/TODO_NEW.md)** - Pending tasks
+- **[docs/TODO_IN_PROGRESS.md](docs/TODO_IN_PROGRESS.md)** - Active work
+- **[docs/TODO_COMPLETED.md](docs/TODO_COMPLETED.md)** - Completed work with detailed logs
+- **[docs/TODO_BACKLOG.md](docs/TODO_BACKLOG.md)** - Future/deprioritized items
 
 ---
 
-## 🎯 Task Management (External Memory)
+## 🚨 TODO Maintenance (CRITICAL)
 
-**Task lists are segmented for efficient context usage:**
-- **[TODO_NEW.md](docs/TODO_NEW.md)** - New & pending tasks (load to see what needs doing)
-- **[TODO_IN_PROGRESS.md](docs/TODO_IN_PROGRESS.md)** - Currently active tasks (load to see current work)
-- **[TODO_COMPLETED.md](docs/TODO_COMPLETED.md)** - Finished tasks (load to see what's been done)
-- **[TODO_BACKLOG.md](docs/TODO_BACKLOG.md)** - Future ideas & deprioritized items (load when planning)
+**The TODO docs are your work log. CLAUDE.md is NOT your work log.**
 
-**Maintain these like documentation**:
-- Check TODO_NEW.md when looking for work
-- Move task to TODO_IN_PROGRESS.md when starting
-- Move task to TODO_COMPLETED.md when done
-- Move unprioritized items to TODO_BACKLOG.md
-- Update "Last Updated" dates
-- Keep context minimal by only loading the relevant TODO file
+### Workflow
+1. **Starting**: Move task from TODO_NEW.md → TODO_IN_PROGRESS.md. Create the task in TODO_IN_PROGRESS.md if it doesn't exist.
+2. **While working**: Update TODO_IN_PROGRESS.md with current status
+3. **Completing**: Move to TODO_COMPLETED.md with detailed entry:
+   - Problem identified
+   - Actions taken (step-by-step)
+   - Files created/modified/deleted
+   - Verification steps performed
+   - Results achieved
 
----
-
-## 📝 When Updating Documentation
-
-1. **Update the relevant doc** - Don't duplicate info in multiple places
-2. **Update this file** - If you add a new doc, link it here
-3. **Keep README current** - User-facing changes should update README
-4. **Date your changes** - Update "Last Updated" at top of files
-5. **Link, don't copy** - Reference other docs instead of repeating content
+### What Goes Where
+- **TODO_COMPLETED.md**: Detailed action logs, file changes, verification results
+- **TODO_BLOCKERS.md**: Critical blocking issues preventing progress (create if needed)
 
 ---
 
-**Remember**: This is a navigation hub, not a knowledge dump. Navigate to specific docs as needed. Treat documentation as external memory to minimize context usage.
+## 📝 Pre-Commit Checklist
+
+**Before EVERY commit, update documentation:**
+
+1. **Code changed?** → Update relevant docs:
+   - README.md (if tech stack/features/architecture affected)
+   - docs/DATABASE_SCHEMA.md (table/column changes)
+   - docs/API_ENDPOINTS.md (endpoint changes)
+   - docs/FRONTEND_STRUCTURE.md (component/state changes)
+   - docs/MIGRATION_SYSTEM.md (new migrations)
+   - docs/DEVELOPMENT.md (new commands)
+
+2. **API changed?** → Regenerate OpenAPI:
+   ```bash
+   docker-compose exec server python generate_openapi.py
+   ```
+
+3. **Work completed?** → Update TODO_COMPLETED.md with detailed log
+
+4. **Update "Last Updated" dates** in modified docs
+
+**Golden Rule**: Documentation updates are NOT optional. Outdated docs are worse than no docs.

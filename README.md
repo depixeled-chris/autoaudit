@@ -19,6 +19,9 @@ docker-compose up
 **First time setup**: Create admin user
 ```bash
 docker-compose exec server python manage.py user:create admin@example.com --name "Admin User"
+
+# Check migrations (using Alembic)
+docker-compose exec server alembic current
 ```
 
 ## What It Does
@@ -41,18 +44,22 @@ docker-compose exec server python manage.py user:create admin@example.com --name
 
 ```
 autoaudit/
-├── server/           # FastAPI backend
-│   ├── api/          # API routes
-│   ├── core/         # Database, migrations, LLM client
-│   ├── services/     # Business logic
-│   └── data/         # SQLite database
-├── client/           # React frontend
+├── server/              # FastAPI backend
+│   ├── api/             # API routes (main.py, states.py, rules.py, llm.py, etc.)
+│   ├── core/            # Database, LLM client, llm_operations
+│   ├── services/        # Business logic
+│   ├── alembic/         # Database migrations (Alembic)
+│   ├── data/            # SQLite database
+│   └── generate_openapi.py  # OpenAPI spec generator
+├── client/              # React frontend
 │   ├── src/
-│   │   ├── pages/    # Route components
-│   │   ├── features/ # Feature modules
-│   │   └── store/    # RTK Query
-├── docs/             # Documentation
-└── CLAUDE.md         # Documentation index (START HERE)
+│   │   ├── pages/       # Route components (ConfigPage with 6 tabs)
+│   │   ├── features/    # Feature modules
+│   │   └── store/api/   # RTK Query
+├── docs/                # Documentation
+├── openapi.json         # OpenAPI 3.1 spec (auto-generated)
+├── openapi.yaml         # OpenAPI 3.1 spec (auto-generated)
+└── CLAUDE.md            # Documentation index (START HERE)
 ```
 
 ## Documentation
@@ -74,10 +81,21 @@ This is the master index linking to:
 - **Compliance Checks**: Screenshot + text analysis with violation detection
 - **Preamble System**: Versioned prompt templates (universal → state → page type → project)
 - **Rule Versioning**: Track legislation changes, rule evolution, collision detection
-- **Cost Tracking**: Per-call LLM usage and cost monitoring
+- **LLM Usage Tracking**: Comprehensive cost monitoring, per-operation model configuration
 - **18 Page Types**: VDP, Homepage, Financing, Lease, Service, etc.
 
 ## Architecture
+
+### Data Hierarchy
+```
+States (OK, TX, etc.)
+  └── Legislation Sources (statutory PDFs)
+       └── Legislation Digests (AI interpretations, versioned)
+            └── Rules (atomic compliance requirements)
+                 └── Projects (dealership sites)
+                      └── URLs (specific pages)
+                           └── Compliance Checks (violations detected)
+```
 
 ### Data Flow
 ```
@@ -96,25 +114,51 @@ States → Legislation Sources → Legislation Digests → Rules
 
 ## Development
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
-- Common commands
-- Debugging guide
+### Common Commands
+
+```bash
+# Start all services
+docker-compose up
+
+# Start in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f server
+
+# Check migrations (Alembic)
+docker-compose exec server alembic current
+
+# Run pending migrations
+docker-compose exec server alembic upgrade head
+
+# Regenerate OpenAPI spec (after API changes)
+docker-compose exec server python generate_openapi.py
+
+# Shell access
+docker-compose exec server sh
+```
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for complete reference:
+- All Docker operations
 - Database operations
+- Debugging guide
 - Hot reload setup
 - Troubleshooting
 
 ## API Documentation
 
 - **Interactive Docs**: http://localhost:8000/docs (Swagger UI)
+- **OpenAPI Spec**: `openapi.json` / `openapi.yaml` (regenerate after API changes)
 - **Complete Reference**: [docs/API_ENDPOINTS.md](docs/API_ENDPOINTS.md)
-- **~80 Endpoints**: Projects, URLs, Checks, States, Legislation, Rules, Preambles
+- **86 Endpoints**: Projects, URLs, Checks, States, Legislation, Rules, Preambles, LLM Management
 
 ## Database
 
 - **SQLite**: `server/data/compliance.db`
-- **27 Tables**: Users, Projects, URLs, Checks, States, Legislation, Rules, Preambles
+- **28 Tables**: Users, Projects, URLs, Checks, States, Legislation, Rules, Preambles, LLM Logs, Model Config
 - **Schema Docs**: [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)
-- **Migrations**: Auto-run on startup via `core/migrations.py`
+- **Migrations**: Alembic (`docker-compose exec server alembic upgrade head`)
 
 ## Environment Variables
 
@@ -130,6 +174,13 @@ Proprietary - All rights reserved
 
 ## Status
 
-**In Development** - Core features complete, collision detection and advanced features in progress.
+**In Development** - Core features complete, LLM tracking implemented, collision detection in progress.
 
-See [CLAUDE.md](CLAUDE.md) for current priorities and known issues.
+Recent updates:
+- ✅ Migration system unified (Alembic only)
+- ✅ LLM usage tracking and cost monitoring
+- ✅ Per-operation model configuration
+- ✅ OpenAPI 3.1 specification
+- ✅ Complete database schema (28 tables)
+
+See [CLAUDE.md](CLAUDE.md) for current priorities and detailed documentation.

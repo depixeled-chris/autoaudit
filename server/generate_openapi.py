@@ -5,9 +5,7 @@ import yaml
 import sys
 from pathlib import Path
 
-# Add server to path
-sys.path.insert(0, str(Path(__file__).parent / "server"))
-
+# Script is now in server directory, so api.main is directly accessible
 from api.main import app
 
 
@@ -17,14 +15,14 @@ def generate_openapi_spec():
     # Get OpenAPI schema from FastAPI
     openapi_schema = app.openapi()
 
-    # Save as JSON
-    json_path = Path("openapi.json")
+    # Save as JSON (project root)
+    json_path = Path("../openapi.json")
     with open(json_path, "w") as f:
         json.dump(openapi_schema, f, indent=2)
     print(f"[OK] Generated OpenAPI JSON: {json_path}")
 
-    # Save as YAML
-    yaml_path = Path("openapi.yaml")
+    # Save as YAML (project root)
+    yaml_path = Path("../openapi.yaml")
     with open(yaml_path, "w") as f:
         yaml.dump(openapi_schema, f, sort_keys=False, default_flow_style=False)
     print(f"[OK] Generated OpenAPI YAML: {yaml_path}")

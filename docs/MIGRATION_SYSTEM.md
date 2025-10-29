@@ -1,42 +1,55 @@
 # Migration System Documentation
 
-## UPDATE: System 2 is Now Active (2025-10-27)
+## ✅ RESOLVED: Single Alembic System (2025-10-28)
 
-**User decision**: External migration files are the correct pattern. Inline migrations in `core/migrations.py` are "pants on head stupid" (user's words).
+**Status**: Properly implemented. Alembic can now create fresh databases from scratch with all schema and seed data.
 
-### System 1: Legacy Inline System (`core/migrations.py`)
-- **Location**: `server/core/migrations.py`
+### Current System: Alembic (ACTIVE)
+- **Location**: `server/alembic/versions/*.py` files
+- **Pattern**: Standard Alembic format with `upgrade()` and `downgrade()` functions
+- **Auto-runs**: NO - Run via `alembic upgrade head`
+- **Docker**: ✅ Mounted as part of `./server:/app`
+- **Tracking**: Alembic's `alembic_version` table
+- **Status**: ✅ ACTIVE - CAN CREATE FRESH DATABASES
+
+### Applied Alembic Migrations
+- **20251028_001**: **Proper baseline** - Creates ALL 31 tables from scratch with indexes
+- **20251028_002**: **Seed data** - Inserts essential data (states, llm_model_config, page_types, preamble_templates)
+
+### Previous Migrations (ARCHIVED - 2025-10-28)
+- **20251027_001**: NO-OP baseline (ARCHIVED - only checked if tables existed, created nothing)
+- **20251027_002**: Operation types update (ARCHIVED - functionality moved to seed data migration)
+
+### Database Backups
+**Location**: `server/data/`
+- `backup_schema.sql` - Complete schema dump (all CREATE statements)
+- `backup_seed_data.sql` - Seed data INSERT statements
+- `compliance.db.backup` - Full database file backup
+- `BACKUP_README.md` - Restore instructions
+
+**These backups were created before Alembic refactoring as a failsafe.**
+
+### System 1: Legacy Inline System (`core/migrations.py`) - DELETED
+- **Location**: `server/core/migrations.py` (DELETED 2025-10-28)
 - **Pattern**: Inline functions with `Migration(version, name, func)` registration
-- **Auto-runs**: Yes, on `ComplianceDatabase.__init__()`
-- **Tracking**: `schema_migrations` table
-- **Status**: ⚠️ LEGACY - DO NOT ADD NEW MIGRATIONS HERE
-- **Applied Migrations**:
+- **Status**: ⚠️ DELETED - File no longer exists
+- **Historical Migrations**:
   - v1-7: Various column additions (base_url, screenshot_path, deleted_at, token tracking, etc.)
   - v8: add_versioning_and_logging (adds digest versioning, INCOMPLETE for rules)
 
-### System 2: External Migration Files (`server/migrations/`)
-- **Location**: `server/migrations/*.py` files
+### System 2: External Manual Files (`server/migrations/`) - DEPRECATED
+- **Location**: `server/migrations/*.py` files (DEPRECATED)
 - **Pattern**: Separate files with `upgrade(conn)` and `downgrade(conn)` functions
-- **Auto-runs**: ❌ NO - Must be run manually
-- **Docker Mount**: ✅ NOW MOUNTED (added to docker-compose.yml line 22)
-- **Tracking**: Run manually, not auto-tracked
-- **Status**: ✅ ACTIVE - USE THIS FOR NEW MIGRATIONS
-- **Files**:
-  - 006-007: Duplicates of System 1 migrations (historical)
+- **Status**: ❌ DEPRECATED - Content consolidated into Alembic baseline
+- **Historical Files**:
+  - 006-007: Duplicates of System 1 migrations
   - 008-010: Page types system
   - 011: Preamble system
-  - 012-013: Rules system (migration 13 creates core tables)
-  - 014: Versioning and logging (failed - digest columns already existed)
-  - **015**: ✅ Complete rules lineage (successfully applied 2025-10-27)
+  - 012-013: Rules system
+  - 014: Versioning and logging (failed)
+  - 015: Complete rules lineage (applied)
 
-## How Migration 13 Got Applied
-
-Migration 13 from System 2 was applied (shows in schema_migrations table as version 13), but:
-1. The `/server/migrations/` directory is NOT mounted in Docker
-2. There's no runner in the codebase that loads these files
-3. Must have been run manually via direct SQL execution or temporary script
-
-## Current Database State (Updated 2025-10-27)
+## Current Database State (Updated 2025-10-28)
 
 ### ✅ Tables and Columns (Complete)
 - `states` - Core state definitions
@@ -62,41 +75,62 @@ All planned schema changes from DESIGN_NOTES.md have been applied:
 
 ## How to Run Migrations Going Forward
 
-### For New Migrations (Use System 2)
+### For New Migrations (Use Alembic)
 
-1. **Create migration file** in `server/migrations/`:
+1. **Create migration file**:
    ```bash
-   # Example: 016_your_migration_name.py
+   # From project root or inside Docker
+   docker-compose exec server alembic revision -m "your_migration_description"
+
+   # This creates: server/alembic/versions/YYYYMMDD_XXX_your_migration_description.py
    ```
 
-2. **Use this template**:
+2. **Edit the generated file**:
    ```python
-   import sqlite3
-   import logging
+   """Brief description
 
-   logger = logging.getLogger(__name__)
+   Revision ID: auto_generated_id
+   Revises: previous_revision_id
+   Create Date: YYYY-MM-DD
+   """
+   from typing import Sequence, Union
+   from alembic import op
+   import sqlalchemy as sa
 
-   def upgrade(conn: sqlite3.Connection):
+   revision: str = 'auto_generated_id'
+   down_revision: Union[str, None] = 'previous_revision_id'
+   branch_labels: Union[str, Sequence[str], None] = None
+   depends_on: Union[str, Sequence[str], None] = None
+
+   def upgrade() -> None:
        """Apply migration."""
-       cursor = conn.cursor()
-       # Your SQL here
-       conn.commit()
+       # Use op.add_column(), op.create_table(), etc.
+       op.add_column('table_name', sa.Column('new_column', sa.String(), nullable=True))
 
-   def downgrade(conn: sqlite3.Connection):
+   def downgrade() -> None:
        """Rollback migration."""
-       cursor = conn.cursor()
-       # Rollback SQL here
-       conn.commit()
+       op.drop_column('table_name', 'new_column')
    ```
 
 3. **Run migration**:
    ```bash
-   docker exec autoaudit-server sh -c "python /app/migrations/016_your_migration_name.py"
+   # Apply all pending migrations
+   docker-compose exec server alembic upgrade head
+
+   # Or apply specific number of migrations
+   docker-compose exec server alembic upgrade +1
    ```
 
 4. **Verify**:
    ```bash
-   docker exec autoaudit-server python -c "
+   # Check current version
+   docker-compose exec server alembic current
+
+   # Check migration history
+   docker-compose exec server alembic history
+
+   # Verify database schema
+   docker-compose exec server python -c "
    import sqlite3
    conn = sqlite3.connect('/app/data/compliance.db')
    cursor = conn.cursor()
@@ -105,56 +139,70 @@ All planned schema changes from DESIGN_NOTES.md have been applied:
    "
    ```
 
-### System 1 Auto-Migrations (Legacy)
+### Common Alembic Commands
 
-System 1 (`core/migrations.py`) still runs automatically on server startup for migrations 1-8. These are LEGACY and should not be modified. New migrations should use System 2.
-- Auto-runs on startup
-- Simple and working (except for v8)
-- Well-documented in codebase
+```bash
+# Check current migration version
+alembic current
 
-Action items:
-1. Delete or comment out migration_008 from `core/migrations.py`
-2. Add migration_009 to add missing columns/tables
-3. Update MIGRATIONS list to skip to version 9
-4. Document that v13 was applied externally
-5. Archive `/server/migrations/` folder with a README explaining they're deprecated
+# Show migration history
+alembic history
+
+# Upgrade to latest
+alembic upgrade head
+
+# Downgrade one migration
+alembic downgrade -1
+
+# Show pending migrations
+alembic current
+alembic show head
+```
 
 ## Migration Pattern Reference
 
-### System 1 Pattern
+### Alembic Pattern (Current)
+
 ```python
-def migration_009_complete_rules_system(conn: sqlite3.Connection):
-    """Add missing rules lineage and logging tables."""
-    cursor = conn.cursor()
+"""Add new feature table
 
-    # Add columns to rules
-    try:
-        cursor.execute("ALTER TABLE rules ADD COLUMN legislation_digest_id INTEGER")
-    except sqlite3.OperationalError as e:
-        if "duplicate column" not in str(e).lower():
-            raise
+Revision ID: 20251028_001
+Revises: 20251027_002
+Create Date: 2025-10-28
+"""
+from typing import Sequence, Union
+from alembic import op
+import sqlalchemy as sa
 
-    # Create new tables
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS rule_collisions (...)
-    """)
+revision: str = '20251028_001'
+down_revision: Union[str, None] = '20251027_002'
 
-    conn.commit()
+def upgrade() -> None:
+    """Add new table and columns."""
+    # Create table
+    op.create_table(
+        'new_feature',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('name', sa.String(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'))
+    )
 
-# Register it
-MIGRATIONS = [
-    # ... existing ...
-    Migration(9, "complete_rules_system", migration_009_complete_rules_system),
-]
+    # Add column to existing table
+    op.add_column('existing_table', sa.Column('new_field', sa.String(), nullable=True))
+
+    # Create index
+    op.create_index('idx_new_feature_name', 'new_feature', ['name'])
+
+def downgrade() -> None:
+    """Remove table and columns."""
+    op.drop_index('idx_new_feature_name')
+    op.drop_column('existing_table', 'new_field')
+    op.drop_table('new_feature')
 ```
 
-### System 2 Pattern (Deprecated)
-```python
-def up(cursor):
-    """Apply migration."""
-    cursor.execute("CREATE TABLE ...")
+### Legacy Patterns (Historical Reference Only)
 
-def down(cursor):
-    """Rollback migration."""
-    cursor.execute("DROP TABLE ...")
-```
+**System 1** (deleted): Inline functions in `core/migrations.py`
+**System 2** (deprecated): Manual `upgrade(conn)` in `server/migrations/`
+
+Both systems are no longer used. All new migrations use Alembic.

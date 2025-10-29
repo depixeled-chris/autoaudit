@@ -2,15 +2,18 @@
 
 **Database**: SQLite at `server/data/compliance.db` (Docker: `/app/data/compliance.db`)
 
-## Migration Status (Updated 2025-10-27)
+## Migration Status (Updated 2025-10-28)
 
 ### Applied Migrations
-- Migration 1-7: Various column additions (inline system) (2025-10-26)
-- Migration 8: add_versioning_and_logging - digest versioning (inline system) (2025-10-27)
-- Migration 13: 013_create_rules_system - core tables (external system) (2025-10-27)
-- **Migration 015**: ✅ complete_rules_lineage - rules columns + collisions + llm_logs (2025-10-27)
+**Alembic System** (current):
+- **20251027_001**: Complete baseline - Consolidates all legacy migrations (1-17)
+- **20251027_002**: Update operation types to ALL_CAPS constants
 
-**See**: [MIGRATION_SYSTEM.md](MIGRATION_SYSTEM.md) for details on the two migration systems.
+**Legacy Systems** (historical):
+- Migration 1-8: Various column additions (inline system, deleted)
+- Migration 13-15: Rules system (external files, deprecated)
+
+**See**: [MIGRATION_SYSTEM.md](MIGRATION_SYSTEM.md) for full migration history and how to use Alembic.
 
 ## Table Categories
 
@@ -24,7 +27,8 @@
 - **compliance_checks** - Historical compliance check results
 - **violations** - Detected compliance violations
 - **llm_calls** - LLM API call tracking (LEGACY - use llm_logs instead)
-- **llm_logs** - ✅ Comprehensive LLM cost and performance tracking (created by migration 015)
+- **llm_logs** - ✅ Comprehensive LLM cost and performance tracking
+- **llm_model_config** - ✅ Per-operation model configuration (which model to use for each operation type)
 
 ### 3. Page Type System
 - **page_types** - Page type definitions (VDP, Homepage, Financing, etc.)
@@ -71,7 +75,7 @@
 - **template_rules** - Rules associated with templates
 - **extraction_templates** - Content extraction configurations
 
-## Schema Status (Updated 2025-10-27)
+## Schema Status (Updated 2025-10-28)
 
 ### ✅ Schema is Complete
 All planned tables and columns from DESIGN_NOTES.md have been applied:
@@ -82,13 +86,15 @@ All planned tables and columns from DESIGN_NOTES.md have been applied:
 4. ✅ `rules` - WITH all 5 lineage columns
 5. ✅ `rule_collisions` - Created for collision detection
 6. ✅ `llm_logs` - Created for comprehensive LLM tracking
-7. ✅ `page_types` - All required columns including preamble fields
+7. ✅ `llm_model_config` - Created for per-operation model selection
+8. ✅ `page_types` - All required columns including preamble fields
 
 ### No Missing Components
 The schema is now ready for:
 - ✅ Versioning system implementation
 - ✅ Collision detection workflow
-- ✅ LLM cost dashboard
+- ✅ LLM cost dashboard (implemented in LLMTab)
+- ✅ Dynamic model configuration per operation type
 
 ## Key Indexes (Updated 2025-10-27)
 

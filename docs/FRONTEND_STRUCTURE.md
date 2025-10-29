@@ -51,14 +51,15 @@ client/src/
 │           ├── EditURLModal.tsx
 │           └── URLList.tsx
 ├── pages/
-│   ├── ConfigPage.tsx          # Legacy config page
-│   └── Config/                 # New config page structure
-│       ├── Config.tsx          # Main config page with tabs
-│       ├── tabs/
-│       │   ├── StatesTab.tsx
-│       │   ├── RulesTab.tsx
-│       │   ├── PreamblesTab.tsx
-│       │   └── OtherTab.tsx
+│   ├── ConfigPage.tsx          # Main config page with tabs
+│   └── Config/                 # Config page tab components
+│       └── tabs/
+│           ├── PageTypesTab.tsx    # (default tab, from features/config)
+│           ├── StatesTab.tsx
+│           ├── RulesTab.tsx
+│           ├── PreamblesTab.tsx
+│           ├── LLMTab.tsx          # LLM usage tracking and model config
+│           └── OtherTab.tsx
 │       └── components/
 │           ├── AddStateModal.tsx
 │           ├── StateConfigModal.tsx
@@ -95,11 +96,13 @@ Here are the existing contents of your todo list:
 - `/projects/:id` - ProjectDetailPage (single project with URLs)
 - `/config` - ConfigPage (system configuration tabs)
 
-### ConfigPage Tabs
+### ConfigPage Tabs (Updated 2025-10-28)
+- **Page Types** - Manage dealership page type definitions (default tab)
 - **States** - Manage states and legislation sources
-- **Rules** - View and approve compliance rules
 - **Preambles** - Manage preamble templates and versions
+- **Rules** - View and approve compliance rules
 - **Other** - Demo utilities (delete data, etc.)
+- **LLM Usage** - View LLM usage stats, logs, and configure models per operation
 
 ## State Management (RTK Query)
 
@@ -108,7 +111,7 @@ Located in `client/src/store/api/`
 
 **apiSlice.ts** - Base configuration
 - baseUrl: `http://localhost:8000/api`
-- Tag types: Projects, URLs, Checks, PageTypes, States, Legislation, Digests, Rules, Preambles
+- Tag types: Projects, URLs, Checks, PageTypes, States, Legislation, Digests, Rules, Preambles, LLMLogs, LLMStats, ModelConfigs
 - Auth: JWT token from localStorage
 
 **statesApi.ts** - States & Legislation endpoints
@@ -119,6 +122,13 @@ Located in `client/src/store/api/`
 - `useDeleteLegislationSourceMutation()` - Delete source + cascade
 - `useGetLegislationDigestsQuery(sourceId)` - Fetch digests for source
 - Plus: Create/update/delete for all entities
+
+**llmApi.ts** - LLM tracking & configuration endpoints (Added 2025-10-28)
+- `useGetLLMLogsQuery()` - Fetch LLM logs with filtering
+- `useGetLLMStatsQuery()` - Fetch aggregate statistics
+- `useGetAvailableModelsQuery()` - Fetch available OpenAI models
+- `useGetModelConfigsQuery()` - Fetch model configurations
+- `useUpdateModelConfigMutation()` - Update model for operation type
 
 ### Cache Invalidation Strategy
 RTK Query uses tag-based invalidation:

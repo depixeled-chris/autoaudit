@@ -33,11 +33,14 @@ docker-compose exec client sh
 
 ### Database Operations
 ```bash
-# Check migration status
-docker-compose exec server python manage.py migration:status
+# Check migration status (Alembic)
+docker-compose exec server alembic current
+
+# Show migration history
+docker-compose exec server alembic history
 
 # Run pending migrations
-docker-compose exec server python manage.py migrate
+docker-compose exec server alembic upgrade head
 
 # Database info (counts)
 docker-compose exec server python manage.py db:info
@@ -47,6 +50,21 @@ docker-compose exec server python manage.py user:create admin@example.com --name
 
 # List all tables
 docker-compose exec server sh -c "python -c \"import sqlite3; conn = sqlite3.connect('/app/data/compliance.db'); cursor = conn.cursor(); cursor.execute('SELECT name FROM sqlite_master WHERE type=\\\"table\\\" ORDER BY name'); print('\\n'.join([r[0] for r in cursor.fetchall()]))\""
+```
+
+### OpenAPI Specification
+```bash
+# ⚠️ IMPORTANT: Regenerate after ANY API endpoint changes
+docker-compose exec server python generate_openapi.py
+
+# This generates:
+# - openapi.json (at project root)
+# - openapi.yaml (at project root)
+#
+# The script outputs a summary showing:
+# - Total endpoints count
+# - Total models/schemas count
+# - List of all endpoints by method and path
 
 # Dump table schema
 docker-compose exec server sh -c "python -c \"import sqlite3; conn = sqlite3.connect('/app/data/compliance.db'); cursor = conn.cursor(); cursor.execute('PRAGMA table_info(rules)'); [print(row) for row in cursor.fetchall()]\""

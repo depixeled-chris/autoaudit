@@ -85,6 +85,57 @@
 | GET | `/digests/{digest_id}` | Get digest details | Yes |
 | PATCH | `/digests/{digest_id}` | Update digest | Yes |
 
+## LLM Management (`/api/llm`)
+
+### LLM Logs
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| GET | `/logs` | List LLM logs with filtering | Yes |
+| GET | `/logs/{log_id}` | Get specific LLM log details | Yes |
+| GET | `/stats` | Get aggregate LLM usage statistics | Yes |
+
+**Query Parameters for GET `/logs`**:
+- `limit` - Results per page (default: 100, max: 1000)
+- `offset` - Skip N results (default: 0)
+- `operation_type` - Filter by operation (PARSE_LEGISLATION, GENERATE_RULES, etc.)
+- `model` - Filter by model (gpt-4o-mini, gpt-4o, etc.)
+- `status` - Filter by status (success, error, timeout)
+
+**Example Response for `/stats`**:
+```json
+{
+  "total_calls": 1234,
+  "total_tokens": 567890,
+  "total_cost_usd": 12.34,
+  "avg_duration_ms": 1500,
+  "by_operation": [
+    {
+      "operation_type": "GENERATE_RULES",
+      "calls": 456,
+      "tokens": 234567,
+      "cost_usd": 5.67
+    }
+  ],
+  "by_model": [...],
+  "by_status": [...]
+}
+```
+
+### Model Configuration
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| GET | `/models` | List model configurations per operation | Yes |
+| PATCH | `/models/{operation_type}` | Update model for operation type | Yes |
+| GET | `/models/available` | List available OpenAI models | Yes |
+| GET | `/operations` | List all operation types with metadata | Yes |
+
+**Example PATCH `/models/GENERATE_RULES`**:
+```json
+{
+  "model": "gpt-4o"
+}
+```
+
 ## Rules (`/api/rules`)
 
 | Method | Path | Description | Auth Required |
